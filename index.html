@@ -451,7 +451,7 @@
 
   <div class="screen">
     <div class="topbar">
-      <div class="logo">HANGMAN '86<span>UNIVERSITY ENTRANCE ENGLISH</span></div>
+      <div class="logo">HANGMAN '86<span>ENTRANCE EXAM ENGLISH</span></div>
       <div class="score">
         WIN <span id="wins">0</span><br>
         STREAK <span id="streak">0</span><br>
@@ -531,26 +531,15 @@
   </section>
   <div class="controls">
     <div class="panel">
-      <label for="difficulty">ENTRANCE LEVEL</label>
+      <label for="difficulty">受験レベル（各50問）</label>
       <select id="difficulty">
-        <option value="easy">標準</option>
-        <option value="normal" selected>難関</option>
-        <option value="hard">最難関</option>
+        <option value="easy">中学受験</option>
+        <option value="normal">高校受験</option>
+        <option value="hard" selected>大学受験</option>
       </select>
     </div>
 
-    <div class="panel">
-      <label for="categorySelect">CATEGORY</label>
-      <select id="categorySelect">
-        <option value="all">ALL</option>
-        <option value="抽象語">ABSTRACT</option>
-        <option value="学術">ACADEMIC</option>
-        <option value="社会">SOCIETY</option>
-        <option value="科学">SCIENCE</option>
-        <option value="動詞">VERBS</option>
-        <option value="形容詞">ADJECTIVES</option>
-      </select>
-    </div>
+<input type="hidden" id="categorySelect" value="all">
 
     <div class="panel">
       <label>&nbsp;</label>
@@ -558,6 +547,7 @@
     </div>
   </div>
 
+  <p class="tiny" style="margin:8px 2px 0">※中学受験は小学生向けの基礎英単語を収録しています。学校ごとの出題範囲を保証するものではありません。</p>
   <div class="foot">
     <div><span class="lamp on"></span>READY</div>
     <div>KEYBOARD A-Z SUPPORTED</div>
@@ -568,160 +558,156 @@
 (() => {
   // 単語データ
   const WORDS = [
-    // 標準レベル：共通テスト〜中堅私大レベル
-    {word:"ACHIEVE", category:"動詞", hint:"達成する。目標や成功を手に入れること", level:"easy"},
-    {word:"ACQUIRE", category:"動詞", hint:"獲得する。知識・技能・財産などを得ること", level:"easy"},
-    {word:"ADAPT", category:"動詞", hint:"適応する。環境や状況に合わせて変化すること", level:"easy"},
-    {word:"ASSUME", category:"動詞", hint:"〜だと思い込む、仮定する", level:"easy"},
-    {word:"CONSUME", category:"動詞", hint:"消費する。時間・エネルギー・資源などを使うこと", level:"easy"},
-    {word:"DECLINE", category:"動詞", hint:"減少する、衰える、断る", level:"easy"},
-    {word:"ESTABLISH", category:"動詞", hint:"設立する、確立する", level:"easy"},
-    {word:"MAINTAIN", category:"動詞", hint:"維持する、主張する", level:"easy"},
-    {word:"OBTAIN", category:"動詞", hint:"得る、入手する", level:"easy"},
-    {word:"REQUIRE", category:"動詞", hint:"必要とする、要求する", level:"easy"},
-
-    {word:"ANCIENT", category:"形容詞", hint:"古代の、とても古い", level:"easy"},
-    {word:"APPARENT", category:"形容詞", hint:"明らかな、見かけ上の", level:"easy"},
-    {word:"ESSENTIAL", category:"形容詞", hint:"不可欠な、本質的な", level:"easy"},
-    {word:"FREQUENT", category:"形容詞", hint:"頻繁な", level:"easy"},
-    {word:"INDIVIDUAL", category:"形容詞", hint:"個々の、個人の", level:"easy"},
-    {word:"POTENTIAL", category:"形容詞", hint:"潜在的な、可能性のある", level:"easy"},
-    {word:"RELEVANT", category:"形容詞", hint:"関連のある、適切な", level:"easy"},
-    {word:"SIGNIFICANT", category:"形容詞", hint:"重要な、かなりの、意味のある", level:"easy"},
-
-    {word:"ATTITUDE", category:"抽象語", hint:"態度、考え方", level:"easy"},
-    {word:"CONCEPT", category:"抽象語", hint:"概念、考え", level:"easy"},
-    {word:"CONTEXT", category:"抽象語", hint:"文脈、状況", level:"easy"},
-    {word:"EVIDENCE", category:"抽象語", hint:"証拠、根拠", level:"easy"},
-    {word:"FEATURE", category:"抽象語", hint:"特徴、特色", level:"easy"},
-    {word:"ISSUE", category:"抽象語", hint:"問題、論点", level:"easy"},
-    {word:"METHOD", category:"学術", hint:"方法、手法", level:"easy"},
-    {word:"THEORY", category:"学術", hint:"理論、学説", level:"easy"},
-    {word:"FACTOR", category:"学術", hint:"要因、要素", level:"easy"},
-    {word:"FUNCTION", category:"学術", hint:"機能、役割", level:"easy"},
-
-    {word:"ECONOMY", category:"社会", hint:"経済、経済活動全体", level:"easy"},
-    {word:"CULTURE", category:"社会", hint:"文化、生活様式や価値観の総体", level:"easy"},
-    {word:"POLICY", category:"社会", hint:"政策、方針", level:"easy"},
-    {word:"POVERTY", category:"社会", hint:"貧困", level:"easy"},
-    {word:"WELFARE", category:"社会", hint:"福祉、幸福", level:"easy"},
-    {word:"SPECIES", category:"科学", hint:"種。生物分類の基本単位", level:"easy"},
-    {word:"GENETIC", category:"科学", hint:"遺伝の、遺伝子の", level:"easy"},
-    {word:"CLIMATE", category:"科学", hint:"気候", level:"easy"},
-    {word:"ENERGY", category:"科学", hint:"エネルギー", level:"easy"},
-    {word:"CELLULAR", category:"科学", hint:"細胞の、細胞から成る", level:"easy"},
-
-    // 難関レベル：MARCH・関関同立〜旧帝大・早慶レベル
-    {word:"ACKNOWLEDGE", category:"動詞", hint:"認める、存在や事実を認識する", level:"normal"},
-    {word:"ANTICIPATE", category:"動詞", hint:"予想する、期待して待つ", level:"normal"},
-    {word:"COMPEL", category:"動詞", hint:"強いる、無理に〜させる", level:"normal"},
-    {word:"CONCEIVE", category:"動詞", hint:"考えつく、想像する", level:"normal"},
-    {word:"CONSTITUTE", category:"動詞", hint:"構成する、〜に相当する", level:"normal"},
-    {word:"DEPRIVE", category:"動詞", hint:"奪う。deprive A of B の形で頻出", level:"normal"},
-    {word:"DISTINGUISH", category:"動詞", hint:"区別する、見分ける", level:"normal"},
-    {word:"EMPHASIZE", category:"動詞", hint:"強調する", level:"normal"},
-    {word:"ENCOUNTER", category:"動詞", hint:"遭遇する、直面する", level:"normal"},
-    {word:"IMPLEMENT", category:"動詞", hint:"実行する、実施する", level:"normal"},
-    {word:"IMPLY", category:"動詞", hint:"暗に意味する", level:"normal"},
-    {word:"INHIBIT", category:"動詞", hint:"抑制する、妨げる", level:"normal"},
-    {word:"PERCEIVE", category:"動詞", hint:"知覚する、認識する", level:"normal"},
-    {word:"PRESERVE", category:"動詞", hint:"保存する、保護する", level:"normal"},
-    {word:"RESOLVE", category:"動詞", hint:"解決する、決意する", level:"normal"},
-    {word:"SUSTAIN", category:"動詞", hint:"維持する、支える", level:"normal"},
-
-    {word:"AMBIGUOUS", category:"形容詞", hint:"曖昧な、二通り以上に解釈できる", level:"normal"},
-    {word:"ARBITRARY", category:"形容詞", hint:"恣意的な、勝手な", level:"normal"},
-    {word:"COHERENT", category:"形容詞", hint:"一貫した、筋の通った", level:"normal"},
-    {word:"CONVENTIONAL", category:"形容詞", hint:"従来の、慣習的な", level:"normal"},
-    {word:"CRUCIAL", category:"形容詞", hint:"極めて重要な", level:"normal"},
-    {word:"INEVITABLE", category:"形容詞", hint:"避けられない、必然的な", level:"normal"},
-    {word:"LEGITIMATE", category:"形容詞", hint:"正当な、合法の", level:"normal"},
-    {word:"PLAUSIBLE", category:"形容詞", hint:"もっともらしい", level:"normal"},
-    {word:"PRECISE", category:"形容詞", hint:"正確な、精密な", level:"normal"},
-    {word:"SUBSTANTIAL", category:"形容詞", hint:"かなりの、実質的な", level:"normal"},
-
-    {word:"ASSUMPTION", category:"抽象語", hint:"仮定、思い込み", level:"normal"},
-    {word:"CONSEQUENCE", category:"抽象語", hint:"結果、重大な帰結", level:"normal"},
-    {word:"CONTROVERSY", category:"抽象語", hint:"論争、議論", level:"normal"},
-    {word:"PERSPECTIVE", category:"抽象語", hint:"観点、見方", level:"normal"},
-    {word:"PRIORITY", category:"抽象語", hint:"優先事項、優先順位", level:"normal"},
-    {word:"TENDENCY", category:"抽象語", hint:"傾向", level:"normal"},
-    {word:"CONSTRAINT", category:"抽象語", hint:"制約、制限", level:"normal"},
-    {word:"INCENTIVE", category:"抽象語", hint:"動機、奨励策", level:"normal"},
-
-    {word:"HYPOTHESIS", category:"学術", hint:"仮説", level:"normal"},
-    {word:"VARIABLE", category:"学術", hint:"変数、変わり得る要因", level:"normal"},
-    {word:"STATISTICS", category:"学術", hint:"統計、統計学", level:"normal"},
-    {word:"ANALYSIS", category:"学術", hint:"分析", level:"normal"},
-    {word:"INTERPRETATION", category:"学術", hint:"解釈", level:"normal"},
-    {word:"CORRELATION", category:"学術", hint:"相関関係", level:"normal"},
-    {word:"DISTRIBUTION", category:"学術", hint:"分布、配布", level:"normal"},
-    {word:"MECHANISM", category:"学術", hint:"仕組み、機構", level:"normal"},
-
-    {word:"INEQUALITY", category:"社会", hint:"不平等、格差", level:"normal"},
-    {word:"IMMIGRATION", category:"社会", hint:"移民、移住", level:"normal"},
-    {word:"DEMOCRACY", category:"社会", hint:"民主主義", level:"normal"},
-    {word:"LEGISLATION", category:"社会", hint:"法律、立法", level:"normal"},
-    {word:"GLOBALIZATION", category:"社会", hint:"グローバル化", level:"normal"},
-    {word:"BIODIVERSITY", category:"科学", hint:"生物多様性", level:"normal"},
-    {word:"EVOLUTION", category:"科学", hint:"進化", level:"normal"},
-    {word:"ECOSYSTEM", category:"科学", hint:"生態系", level:"normal"},
-    {word:"NEUROLOGY", category:"科学", hint:"神経学", level:"normal"},
-    {word:"PHENOMENON", category:"科学", hint:"現象。複数形 phenomena も頻出", level:"normal"},
-
-    // 最難関レベル：最難関国公立・早慶上位・医学部レベル
-    {word:"ALLEVIATE", category:"動詞", hint:"軽減する。苦痛・問題・負担などを和らげる", level:"hard"},
-    {word:"ARTICULATE", category:"動詞", hint:"明確に述べる、はっきり表現する", level:"hard"},
-    {word:"CONTEMPLATE", category:"動詞", hint:"熟考する、じっくり考える", level:"hard"},
-    {word:"DETERIORATE", category:"動詞", hint:"悪化する、劣化する", level:"hard"},
-    {word:"DISSEMINATE", category:"動詞", hint:"広める、普及させる", level:"hard"},
-    {word:"ELICIT", category:"動詞", hint:"引き出す。反応・情報などを誘い出す", level:"hard"},
-    {word:"ERADICATE", category:"動詞", hint:"根絶する、完全に取り除く", level:"hard"},
-    {word:"EXACERBATE", category:"動詞", hint:"悪化させる", level:"hard"},
-    {word:"FACILITATE", category:"動詞", hint:"促進する、容易にする", level:"hard"},
-    {word:"RECONCILE", category:"動詞", hint:"調和させる、和解させる", level:"hard"},
-    {word:"SCRUTINIZE", category:"動詞", hint:"詳しく調べる、精査する", level:"hard"},
-    {word:"UNDERMINE", category:"動詞", hint:"徐々に弱める、損なう", level:"hard"},
-
-    {word:"INTRINSIC", category:"形容詞", hint:"本質的な、内在する", level:"hard"},
-    {word:"METICULOUS", category:"形容詞", hint:"細心の注意を払う、几帳面な", level:"hard"},
-    {word:"OBSOLETE", category:"形容詞", hint:"時代遅れの、廃れた", level:"hard"},
-    {word:"PERVASIVE", category:"形容詞", hint:"広範囲に浸透している", level:"hard"},
-    {word:"PROFOUND", category:"形容詞", hint:"深い、重大な", level:"hard"},
-    {word:"REDUNDANT", category:"形容詞", hint:"余分な、不必要な", level:"hard"},
-    {word:"RIGOROUS", category:"形容詞", hint:"厳密な、厳格な", level:"hard"},
-    {word:"TENTATIVE", category:"形容詞", hint:"仮の、暫定的な、ためらいがちな", level:"hard"},
-    {word:"VULNERABLE", category:"形容詞", hint:"傷つきやすい、弱い立場にある", level:"hard"},
-    {word:"EMPIRICAL", category:"形容詞", hint:"経験的な、観察や実験に基づく", level:"hard"},
-
-    {word:"PARADOX", category:"抽象語", hint:"逆説。一見矛盾するが真理を含む表現や状況", level:"hard"},
-    {word:"DILEMMA", category:"抽象語", hint:"板挟み、二者択一の難題", level:"hard"},
-    {word:"PREJUDICE", category:"抽象語", hint:"偏見、先入観", level:"hard"},
-    {word:"CONSENSUS", category:"抽象語", hint:"合意、意見の一致", level:"hard"},
-    {word:"DISCREPANCY", category:"抽象語", hint:"食い違い、不一致", level:"hard"},
-    {word:"RESILIENCE", category:"抽象語", hint:"回復力、立ち直る力", level:"hard"},
-    {word:"ACCOUNTABILITY", category:"抽象語", hint:"説明責任", level:"hard"},
-    {word:"SUSTAINABILITY", category:"抽象語", hint:"持続可能性", level:"hard"},
-
-    {word:"METHODOLOGY", category:"学術", hint:"方法論、研究手法の体系", level:"hard"},
-    {word:"VALIDITY", category:"学術", hint:"妥当性、有効性", level:"hard"},
-    {word:"INFERENCE", category:"学術", hint:"推論、推測", level:"hard"},
-    {word:"PARADIGM", category:"学術", hint:"思考の枠組み、模範となる体系", level:"hard"},
-    {word:"CAUSALITY", category:"学術", hint:"因果関係", level:"hard"},
-    {word:"GENERALIZATION", category:"学術", hint:"一般化、概括", level:"hard"},
-    {word:"REPLICATION", category:"学術", hint:"追試、再現", level:"hard"},
-    {word:"SYNTHESIS", category:"学術", hint:"統合、総合", level:"hard"},
-
-    {word:"BUREAUCRACY", category:"社会", hint:"官僚制度、官僚主義", level:"hard"},
-    {word:"SOVEREIGNTY", category:"社会", hint:"主権、統治権", level:"hard"},
-    {word:"IDEOLOGY", category:"社会", hint:"思想体系、イデオロギー", level:"hard"},
-    {word:"DEMOGRAPHIC", category:"社会", hint:"人口統計上の、人口層の", level:"hard"},
-    {word:"URBANIZATION", category:"社会", hint:"都市化", level:"hard"},
-    {word:"NEUROPLASTICITY", category:"科学", hint:"神経可塑性。脳や神経系が変化・適応する性質", level:"hard"},
-    {word:"HOMEOSTASIS", category:"科学", hint:"恒常性。生体が内部環境を一定に保つ働き", level:"hard"},
-    {word:"PHOTOSYNTHESIS", category:"科学", hint:"光合成", level:"hard"},
-    {word:"METABOLISM", category:"科学", hint:"代謝", level:"hard"},
-    {word:"CONSCIOUSNESS", category:"科学", hint:"意識、意識状態", level:"hard"}
+    {"word":"ANIMAL","category":"名詞","hint":"動物","level":"easy"},
+    {"word":"APPLE","category":"名詞","hint":"りんご","level":"easy"},
+    {"word":"AUTUMN","category":"名詞","hint":"秋","level":"easy"},
+    {"word":"BEAUTIFUL","category":"形容詞","hint":"美しい","level":"easy"},
+    {"word":"BICYCLE","category":"名詞","hint":"自転車","level":"easy"},
+    {"word":"BREAKFAST","category":"名詞","hint":"朝食","level":"easy"},
+    {"word":"BROTHER","category":"名詞","hint":"兄または弟","level":"easy"},
+    {"word":"BUILDING","category":"名詞","hint":"建物","level":"easy"},
+    {"word":"CALENDAR","category":"名詞","hint":"カレンダー","level":"easy"},
+    {"word":"CAPITAL","category":"名詞","hint":"首都","level":"easy"},
+    {"word":"CHILDREN","category":"名詞","hint":"子どもたち（childの複数形）","level":"easy"},
+    {"word":"COUNTRY","category":"名詞","hint":"国、田舎","level":"easy"},
+    {"word":"DANGER","category":"名詞","hint":"危険","level":"easy"},
+    {"word":"DICTIONARY","category":"名詞","hint":"辞書","level":"easy"},
+    {"word":"DIFFERENT","category":"形容詞","hint":"異なる","level":"easy"},
+    {"word":"DINNER","category":"名詞","hint":"夕食","level":"easy"},
+    {"word":"DOCTOR","category":"名詞","hint":"医師","level":"easy"},
+    {"word":"ELEMENTARY","category":"形容詞","hint":"初等の、基本的な","level":"easy"},
+    {"word":"ENGLISH","category":"名詞","hint":"英語","level":"easy"},
+    {"word":"FAMILY","category":"名詞","hint":"家族","level":"easy"},
+    {"word":"FAMOUS","category":"形容詞","hint":"有名な","level":"easy"},
+    {"word":"FATHER","category":"名詞","hint":"父","level":"easy"},
+    {"word":"FAVORITE","category":"形容詞","hint":"お気に入りの","level":"easy"},
+    {"word":"FEBRUARY","category":"名詞","hint":"2月","level":"easy"},
+    {"word":"FLOWER","category":"名詞","hint":"花","level":"easy"},
+    {"word":"FOREST","category":"名詞","hint":"森林","level":"easy"},
+    {"word":"FRIEND","category":"名詞","hint":"友達","level":"easy"},
+    {"word":"GARDEN","category":"名詞","hint":"庭","level":"easy"},
+    {"word":"GEOGRAPHY","category":"名詞","hint":"地理","level":"easy"},
+    {"word":"HISTORY","category":"名詞","hint":"歴史","level":"easy"},
+    {"word":"HOSPITAL","category":"名詞","hint":"病院","level":"easy"},
+    {"word":"IMPORTANT","category":"形容詞","hint":"重要な","level":"easy"},
+    {"word":"INTERESTING","category":"形容詞","hint":"面白い、興味深い","level":"easy"},
+    {"word":"JAPANESE","category":"名詞","hint":"日本語、日本人","level":"easy"},
+    {"word":"KITCHEN","category":"名詞","hint":"台所","level":"easy"},
+    {"word":"LANGUAGE","category":"名詞","hint":"言語","level":"easy"},
+    {"word":"LIBRARY","category":"名詞","hint":"図書館","level":"easy"},
+    {"word":"MOUNTAIN","category":"名詞","hint":"山","level":"easy"},
+    {"word":"MUSEUM","category":"名詞","hint":"博物館、美術館","level":"easy"},
+    {"word":"NATURE","category":"名詞","hint":"自然","level":"easy"},
+    {"word":"OCEAN","category":"名詞","hint":"海、大洋","level":"easy"},
+    {"word":"PARENTS","category":"名詞","hint":"両親","level":"easy"},
+    {"word":"PEOPLE","category":"名詞","hint":"人々","level":"easy"},
+    {"word":"PICTURE","category":"名詞","hint":"絵、写真","level":"easy"},
+    {"word":"QUESTION","category":"名詞","hint":"質問、問題","level":"easy"},
+    {"word":"SCIENCE","category":"名詞","hint":"理科、科学","level":"easy"},
+    {"word":"SEASON","category":"名詞","hint":"季節","level":"easy"},
+    {"word":"STUDENT","category":"名詞","hint":"生徒、学生","level":"easy"},
+    {"word":"TEACHER","category":"名詞","hint":"先生","level":"easy"},
+    {"word":"WEATHER","category":"名詞","hint":"天気","level":"easy"},
+    {"word":"ACCEPT","category":"動詞","hint":"受け入れる","level":"normal"},
+    {"word":"ACTUALLY","category":"副詞","hint":"実際には","level":"normal"},
+    {"word":"ADVANTAGE","category":"名詞","hint":"利点、有利な点","level":"normal"},
+    {"word":"ADVICE","category":"名詞","hint":"助言","level":"normal"},
+    {"word":"AGREE","category":"動詞","hint":"賛成する、同意する","level":"normal"},
+    {"word":"ALTHOUGH","category":"接続詞","hint":"〜だけれども","level":"normal"},
+    {"word":"APPEAR","category":"動詞","hint":"現れる、〜のように見える","level":"normal"},
+    {"word":"ARRIVE","category":"動詞","hint":"到着する","level":"normal"},
+    {"word":"BECAUSE","category":"接続詞","hint":"なぜなら〜だから","level":"normal"},
+    {"word":"BELIEVE","category":"動詞","hint":"信じる","level":"normal"},
+    {"word":"BORROW","category":"動詞","hint":"借りる","level":"normal"},
+    {"word":"CHOOSE","category":"動詞","hint":"選ぶ","level":"normal"},
+    {"word":"COMPARE","category":"動詞","hint":"比較する","level":"normal"},
+    {"word":"CONTINUE","category":"動詞","hint":"続ける","level":"normal"},
+    {"word":"CULTURE","category":"名詞","hint":"文化","level":"normal"},
+    {"word":"DECIDE","category":"動詞","hint":"決める","level":"normal"},
+    {"word":"DEVELOP","category":"動詞","hint":"発達する、開発する","level":"normal"},
+    {"word":"DISCOVER","category":"動詞","hint":"発見する","level":"normal"},
+    {"word":"EDUCATION","category":"名詞","hint":"教育","level":"normal"},
+    {"word":"EFFECT","category":"名詞","hint":"影響、効果","level":"normal"},
+    {"word":"ENVIRONMENT","category":"名詞","hint":"環境","level":"normal"},
+    {"word":"EXPERIENCE","category":"名詞","hint":"経験","level":"normal"},
+    {"word":"EXPLAIN","category":"動詞","hint":"説明する","level":"normal"},
+    {"word":"FACTORY","category":"名詞","hint":"工場","level":"normal"},
+    {"word":"FUTURE","category":"名詞","hint":"未来","level":"normal"},
+    {"word":"HEALTH","category":"名詞","hint":"健康","level":"normal"},
+    {"word":"IMAGINE","category":"動詞","hint":"想像する","level":"normal"},
+    {"word":"IMPROVE","category":"動詞","hint":"改善する、上達する","level":"normal"},
+    {"word":"INFORMATION","category":"名詞","hint":"情報","level":"normal"},
+    {"word":"INSTEAD","category":"副詞","hint":"その代わりに","level":"normal"},
+    {"word":"INVENT","category":"動詞","hint":"発明する","level":"normal"},
+    {"word":"KNOWLEDGE","category":"名詞","hint":"知識","level":"normal"},
+    {"word":"NECESSARY","category":"形容詞","hint":"必要な","level":"normal"},
+    {"word":"OPINION","category":"名詞","hint":"意見","level":"normal"},
+    {"word":"OPPORTUNITY","category":"名詞","hint":"機会","level":"normal"},
+    {"word":"POLLUTION","category":"名詞","hint":"汚染","level":"normal"},
+    {"word":"POPULATION","category":"名詞","hint":"人口","level":"normal"},
+    {"word":"POSSIBLE","category":"形容詞","hint":"可能な","level":"normal"},
+    {"word":"PROBLEM","category":"名詞","hint":"問題","level":"normal"},
+    {"word":"PROTECT","category":"動詞","hint":"保護する","level":"normal"},
+    {"word":"REASON","category":"名詞","hint":"理由","level":"normal"},
+    {"word":"RECEIVE","category":"動詞","hint":"受け取る","level":"normal"},
+    {"word":"RECYCLE","category":"動詞","hint":"再利用する","level":"normal"},
+    {"word":"RELATIONSHIP","category":"名詞","hint":"関係","level":"normal"},
+    {"word":"RESULT","category":"名詞","hint":"結果","level":"normal"},
+    {"word":"SOCIETY","category":"名詞","hint":"社会","level":"normal"},
+    {"word":"SOLUTION","category":"名詞","hint":"解決策","level":"normal"},
+    {"word":"SUGGEST","category":"動詞","hint":"提案する","level":"normal"},
+    {"word":"TECHNOLOGY","category":"名詞","hint":"技術","level":"normal"},
+    {"word":"TRADITION","category":"名詞","hint":"伝統","level":"normal"},
+    {"word":"ABANDON","category":"動詞","hint":"捨てる、断念する","level":"hard"},
+    {"word":"ABSTRACT","category":"形容詞","hint":"抽象的な","level":"hard"},
+    {"word":"ACCOMPLISH","category":"動詞","hint":"成し遂げる","level":"hard"},
+    {"word":"ACQUIRE","category":"動詞","hint":"獲得する、習得する","level":"hard"},
+    {"word":"ADAPT","category":"動詞","hint":"適応する","level":"hard"},
+    {"word":"ADEQUATE","category":"形容詞","hint":"十分な、適切な","level":"hard"},
+    {"word":"ADVOCATE","category":"動詞","hint":"支持する、提唱する","level":"hard"},
+    {"word":"ANALYSIS","category":"名詞","hint":"分析","level":"hard"},
+    {"word":"ANTICIPATE","category":"動詞","hint":"予期する","level":"hard"},
+    {"word":"APPROACH","category":"名詞","hint":"方法、取り組み方","level":"hard"},
+    {"word":"APPROPRIATE","category":"形容詞","hint":"適切な","level":"hard"},
+    {"word":"ASSUMPTION","category":"名詞","hint":"仮定、思い込み","level":"hard"},
+    {"word":"ATTITUDE","category":"名詞","hint":"態度、考え方","level":"hard"},
+    {"word":"CAPACITY","category":"名詞","hint":"能力、収容力","level":"hard"},
+    {"word":"CIRCUMSTANCE","category":"名詞","hint":"状況、事情","level":"hard"},
+    {"word":"COHERENT","category":"形容詞","hint":"首尾一貫した","level":"hard"},
+    {"word":"COMPLEX","category":"形容詞","hint":"複雑な","level":"hard"},
+    {"word":"CONCEPT","category":"名詞","hint":"概念","level":"hard"},
+    {"word":"CONSEQUENCE","category":"名詞","hint":"結果、帰結","level":"hard"},
+    {"word":"CONSIDERABLE","category":"形容詞","hint":"かなりの","level":"hard"},
+    {"word":"CONSTITUTE","category":"動詞","hint":"構成する","level":"hard"},
+    {"word":"CONTRADICT","category":"動詞","hint":"矛盾する、反論する","level":"hard"},
+    {"word":"CONTROVERSY","category":"名詞","hint":"論争","level":"hard"},
+    {"word":"CONVENTIONAL","category":"形容詞","hint":"従来の、慣習的な","level":"hard"},
+    {"word":"CRUCIAL","category":"形容詞","hint":"極めて重要な","level":"hard"},
+    {"word":"DECLINE","category":"動詞","hint":"減少する、衰える","level":"hard"},
+    {"word":"DEMONSTRATE","category":"動詞","hint":"実証する、示す","level":"hard"},
+    {"word":"DERIVE","category":"動詞","hint":"由来する、引き出す","level":"hard"},
+    {"word":"DISTRIBUTION","category":"名詞","hint":"分布、配布","level":"hard"},
+    {"word":"DIVERSITY","category":"名詞","hint":"多様性","level":"hard"},
+    {"word":"EMPHASIZE","category":"動詞","hint":"強調する","level":"hard"},
+    {"word":"EVIDENCE","category":"名詞","hint":"証拠、根拠","level":"hard"},
+    {"word":"EVOLUTION","category":"名詞","hint":"進化","level":"hard"},
+    {"word":"EXPLICIT","category":"形容詞","hint":"明白な、明示的な","level":"hard"},
+    {"word":"FACILITATE","category":"動詞","hint":"促進する、容易にする","level":"hard"},
+    {"word":"FUNDAMENTAL","category":"形容詞","hint":"根本的な、基本的な","level":"hard"},
+    {"word":"HYPOTHESIS","category":"名詞","hint":"仮説","level":"hard"},
+    {"word":"IMPACT","category":"名詞","hint":"影響、衝撃","level":"hard"},
+    {"word":"IMPLEMENT","category":"動詞","hint":"実行する、実施する","level":"hard"},
+    {"word":"INEVITABLE","category":"形容詞","hint":"避けられない、必然的な","level":"hard"},
+    {"word":"INTERPRET","category":"動詞","hint":"解釈する","level":"hard"},
+    {"word":"JUSTIFY","category":"動詞","hint":"正当化する","level":"hard"},
+    {"word":"MAINTAIN","category":"動詞","hint":"維持する、主張する","level":"hard"},
+    {"word":"PERCEIVE","category":"動詞","hint":"知覚する、認識する","level":"hard"},
+    {"word":"PERSPECTIVE","category":"名詞","hint":"観点、見方","level":"hard"},
+    {"word":"PHENOMENON","category":"名詞","hint":"現象","level":"hard"},
+    {"word":"PRESERVE","category":"動詞","hint":"保存する、保護する","level":"hard"},
+    {"word":"RELEVANT","category":"形容詞","hint":"関連のある","level":"hard"},
+    {"word":"SIGNIFICANT","category":"形容詞","hint":"重要な、かなりの","level":"hard"},
+    {"word":"SUSTAINABLE","category":"形容詞","hint":"持続可能な","level":"hard"}
   ];
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -791,24 +777,7 @@
 
   function chooseWord(){
     const level = els.difficulty.value;
-    const category = els.categorySelect.value;
-
-    let pool = WORDS.filter(item => item.level === level);
-
-    if(category !== "all"){
-      pool = pool.filter(item => item.category === category);
-    }
-
-    // 選択条件で候補がなければ、カテゴリを優先して難易度条件を外す
-    if(pool.length === 0 && category !== "all"){
-      pool = WORDS.filter(item => item.category === category);
-    }
-
-    // それでも候補がなければ全体から選ぶ
-    if(pool.length === 0){
-      pool = WORDS;
-    }
-
+    const pool = WORDS.filter(item => item.level === level);
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
@@ -1100,7 +1069,7 @@
 (() => {
   'use strict';
   // 同一ルームのプレイヤー1（ホスト）がターンと点数の確定権限を持つ
-  const BANK=[{"word":"ACHIEVE","category":"動詞","hint":"達成する。目標や成功を手に入れること","level":"easy"},{"word":"ACQUIRE","category":"動詞","hint":"獲得する。知識・技能・財産などを得ること","level":"easy"},{"word":"ADAPT","category":"動詞","hint":"適応する。環境や状況に合わせて変化すること","level":"easy"},{"word":"ASSUME","category":"動詞","hint":"〜だと思い込む、仮定する","level":"easy"},{"word":"CONSUME","category":"動詞","hint":"消費する。時間・エネルギー・資源などを使うこと","level":"easy"},{"word":"DECLINE","category":"動詞","hint":"減少する、衰える、断る","level":"easy"},{"word":"ESTABLISH","category":"動詞","hint":"設立する、確立する","level":"easy"},{"word":"MAINTAIN","category":"動詞","hint":"維持する、主張する","level":"easy"},{"word":"OBTAIN","category":"動詞","hint":"得る、入手する","level":"easy"},{"word":"REQUIRE","category":"動詞","hint":"必要とする、要求する","level":"easy"},{"word":"ANCIENT","category":"形容詞","hint":"古代の、とても古い","level":"easy"},{"word":"APPARENT","category":"形容詞","hint":"明らかな、見かけ上の","level":"easy"},{"word":"ESSENTIAL","category":"形容詞","hint":"不可欠な、本質的な","level":"easy"},{"word":"FREQUENT","category":"形容詞","hint":"頻繁な","level":"easy"},{"word":"INDIVIDUAL","category":"形容詞","hint":"個々の、個人の","level":"easy"},{"word":"POTENTIAL","category":"形容詞","hint":"潜在的な、可能性のある","level":"easy"},{"word":"RELEVANT","category":"形容詞","hint":"関連のある、適切な","level":"easy"},{"word":"SIGNIFICANT","category":"形容詞","hint":"重要な、かなりの、意味のある","level":"easy"},{"word":"ATTITUDE","category":"抽象語","hint":"態度、考え方","level":"easy"},{"word":"CONCEPT","category":"抽象語","hint":"概念、考え","level":"easy"},{"word":"CONTEXT","category":"抽象語","hint":"文脈、状況","level":"easy"},{"word":"EVIDENCE","category":"抽象語","hint":"証拠、根拠","level":"easy"},{"word":"FEATURE","category":"抽象語","hint":"特徴、特色","level":"easy"},{"word":"ISSUE","category":"抽象語","hint":"問題、論点","level":"easy"},{"word":"METHOD","category":"学術","hint":"方法、手法","level":"easy"},{"word":"THEORY","category":"学術","hint":"理論、学説","level":"easy"},{"word":"FACTOR","category":"学術","hint":"要因、要素","level":"easy"},{"word":"FUNCTION","category":"学術","hint":"機能、役割","level":"easy"},{"word":"ECONOMY","category":"社会","hint":"経済、経済活動全体","level":"easy"},{"word":"CULTURE","category":"社会","hint":"文化、生活様式や価値観の総体","level":"easy"},{"word":"POLICY","category":"社会","hint":"政策、方針","level":"easy"},{"word":"POVERTY","category":"社会","hint":"貧困","level":"easy"},{"word":"WELFARE","category":"社会","hint":"福祉、幸福","level":"easy"},{"word":"SPECIES","category":"科学","hint":"種。生物分類の基本単位","level":"easy"},{"word":"GENETIC","category":"科学","hint":"遺伝の、遺伝子の","level":"easy"},{"word":"CLIMATE","category":"科学","hint":"気候","level":"easy"},{"word":"ENERGY","category":"科学","hint":"エネルギー","level":"easy"},{"word":"CELLULAR","category":"科学","hint":"細胞の、細胞から成る","level":"easy"},{"word":"ACKNOWLEDGE","category":"動詞","hint":"認める、存在や事実を認識する","level":"normal"},{"word":"ANTICIPATE","category":"動詞","hint":"予想する、期待して待つ","level":"normal"},{"word":"COMPEL","category":"動詞","hint":"強いる、無理に〜させる","level":"normal"},{"word":"CONCEIVE","category":"動詞","hint":"考えつく、想像する","level":"normal"},{"word":"CONSTITUTE","category":"動詞","hint":"構成する、〜に相当する","level":"normal"},{"word":"DEPRIVE","category":"動詞","hint":"奪う。deprive A of B の形で頻出","level":"normal"},{"word":"DISTINGUISH","category":"動詞","hint":"区別する、見分ける","level":"normal"},{"word":"EMPHASIZE","category":"動詞","hint":"強調する","level":"normal"},{"word":"ENCOUNTER","category":"動詞","hint":"遭遇する、直面する","level":"normal"},{"word":"IMPLEMENT","category":"動詞","hint":"実行する、実施する","level":"normal"},{"word":"IMPLY","category":"動詞","hint":"暗に意味する","level":"normal"},{"word":"INHIBIT","category":"動詞","hint":"抑制する、妨げる","level":"normal"},{"word":"PERCEIVE","category":"動詞","hint":"知覚する、認識する","level":"normal"},{"word":"PRESERVE","category":"動詞","hint":"保存する、保護する","level":"normal"},{"word":"RESOLVE","category":"動詞","hint":"解決する、決意する","level":"normal"},{"word":"SUSTAIN","category":"動詞","hint":"維持する、支える","level":"normal"},{"word":"AMBIGUOUS","category":"形容詞","hint":"曖昧な、二通り以上に解釈できる","level":"normal"},{"word":"ARBITRARY","category":"形容詞","hint":"恣意的な、勝手な","level":"normal"},{"word":"COHERENT","category":"形容詞","hint":"一貫した、筋の通った","level":"normal"},{"word":"CONVENTIONAL","category":"形容詞","hint":"従来の、慣習的な","level":"normal"},{"word":"CRUCIAL","category":"形容詞","hint":"極めて重要な","level":"normal"},{"word":"INEVITABLE","category":"形容詞","hint":"避けられない、必然的な","level":"normal"},{"word":"LEGITIMATE","category":"形容詞","hint":"正当な、合法の","level":"normal"},{"word":"PLAUSIBLE","category":"形容詞","hint":"もっともらしい","level":"normal"},{"word":"PRECISE","category":"形容詞","hint":"正確な、精密な","level":"normal"},{"word":"SUBSTANTIAL","category":"形容詞","hint":"かなりの、実質的な","level":"normal"},{"word":"ASSUMPTION","category":"抽象語","hint":"仮定、思い込み","level":"normal"},{"word":"CONSEQUENCE","category":"抽象語","hint":"結果、重大な帰結","level":"normal"},{"word":"CONTROVERSY","category":"抽象語","hint":"論争、議論","level":"normal"},{"word":"PERSPECTIVE","category":"抽象語","hint":"観点、見方","level":"normal"},{"word":"PRIORITY","category":"抽象語","hint":"優先事項、優先順位","level":"normal"},{"word":"TENDENCY","category":"抽象語","hint":"傾向","level":"normal"},{"word":"CONSTRAINT","category":"抽象語","hint":"制約、制限","level":"normal"},{"word":"INCENTIVE","category":"抽象語","hint":"動機、奨励策","level":"normal"},{"word":"HYPOTHESIS","category":"学術","hint":"仮説","level":"normal"},{"word":"VARIABLE","category":"学術","hint":"変数、変わり得る要因","level":"normal"},{"word":"STATISTICS","category":"学術","hint":"統計、統計学","level":"normal"},{"word":"ANALYSIS","category":"学術","hint":"分析","level":"normal"},{"word":"INTERPRETATION","category":"学術","hint":"解釈","level":"normal"},{"word":"CORRELATION","category":"学術","hint":"相関関係","level":"normal"},{"word":"DISTRIBUTION","category":"学術","hint":"分布、配布","level":"normal"},{"word":"MECHANISM","category":"学術","hint":"仕組み、機構","level":"normal"},{"word":"INEQUALITY","category":"社会","hint":"不平等、格差","level":"normal"},{"word":"IMMIGRATION","category":"社会","hint":"移民、移住","level":"normal"},{"word":"DEMOCRACY","category":"社会","hint":"民主主義","level":"normal"},{"word":"LEGISLATION","category":"社会","hint":"法律、立法","level":"normal"},{"word":"GLOBALIZATION","category":"社会","hint":"グローバル化","level":"normal"},{"word":"BIODIVERSITY","category":"科学","hint":"生物多様性","level":"normal"},{"word":"EVOLUTION","category":"科学","hint":"進化","level":"normal"},{"word":"ECOSYSTEM","category":"科学","hint":"生態系","level":"normal"},{"word":"NEUROLOGY","category":"科学","hint":"神経学","level":"normal"},{"word":"PHENOMENON","category":"科学","hint":"現象。複数形 phenomena も頻出","level":"normal"},{"word":"ALLEVIATE","category":"動詞","hint":"軽減する。苦痛・問題・負担などを和らげる","level":"hard"},{"word":"ARTICULATE","category":"動詞","hint":"明確に述べる、はっきり表現する","level":"hard"},{"word":"CONTEMPLATE","category":"動詞","hint":"熟考する、じっくり考える","level":"hard"},{"word":"DETERIORATE","category":"動詞","hint":"悪化する、劣化する","level":"hard"},{"word":"DISSEMINATE","category":"動詞","hint":"広める、普及させる","level":"hard"},{"word":"ELICIT","category":"動詞","hint":"引き出す。反応・情報などを誘い出す","level":"hard"},{"word":"ERADICATE","category":"動詞","hint":"根絶する、完全に取り除く","level":"hard"},{"word":"EXACERBATE","category":"動詞","hint":"悪化させる","level":"hard"},{"word":"FACILITATE","category":"動詞","hint":"促進する、容易にする","level":"hard"},{"word":"RECONCILE","category":"動詞","hint":"調和させる、和解させる","level":"hard"},{"word":"SCRUTINIZE","category":"動詞","hint":"詳しく調べる、精査する","level":"hard"},{"word":"UNDERMINE","category":"動詞","hint":"徐々に弱める、損なう","level":"hard"},{"word":"INTRINSIC","category":"形容詞","hint":"本質的な、内在する","level":"hard"},{"word":"METICULOUS","category":"形容詞","hint":"細心の注意を払う、几帳面な","level":"hard"},{"word":"OBSOLETE","category":"形容詞","hint":"時代遅れの、廃れた","level":"hard"},{"word":"PERVASIVE","category":"形容詞","hint":"広範囲に浸透している","level":"hard"},{"word":"PROFOUND","category":"形容詞","hint":"深い、重大な","level":"hard"},{"word":"REDUNDANT","category":"形容詞","hint":"余分な、不必要な","level":"hard"},{"word":"RIGOROUS","category":"形容詞","hint":"厳密な、厳格な","level":"hard"},{"word":"TENTATIVE","category":"形容詞","hint":"仮の、暫定的な、ためらいがちな","level":"hard"},{"word":"VULNERABLE","category":"形容詞","hint":"傷つきやすい、弱い立場にある","level":"hard"},{"word":"EMPIRICAL","category":"形容詞","hint":"経験的な、観察や実験に基づく","level":"hard"},{"word":"PARADOX","category":"抽象語","hint":"逆説。一見矛盾するが真理を含む表現や状況","level":"hard"},{"word":"DILEMMA","category":"抽象語","hint":"板挟み、二者択一の難題","level":"hard"},{"word":"PREJUDICE","category":"抽象語","hint":"偏見、先入観","level":"hard"},{"word":"CONSENSUS","category":"抽象語","hint":"合意、意見の一致","level":"hard"},{"word":"DISCREPANCY","category":"抽象語","hint":"食い違い、不一致","level":"hard"},{"word":"RESILIENCE","category":"抽象語","hint":"回復力、立ち直る力","level":"hard"},{"word":"ACCOUNTABILITY","category":"抽象語","hint":"説明責任","level":"hard"},{"word":"SUSTAINABILITY","category":"抽象語","hint":"持続可能性","level":"hard"},{"word":"METHODOLOGY","category":"学術","hint":"方法論、研究手法の体系","level":"hard"},{"word":"VALIDITY","category":"学術","hint":"妥当性、有効性","level":"hard"},{"word":"INFERENCE","category":"学術","hint":"推論、推測","level":"hard"},{"word":"PARADIGM","category":"学術","hint":"思考の枠組み、模範となる体系","level":"hard"},{"word":"CAUSALITY","category":"学術","hint":"因果関係","level":"hard"},{"word":"GENERALIZATION","category":"学術","hint":"一般化、概括","level":"hard"},{"word":"REPLICATION","category":"学術","hint":"追試、再現","level":"hard"},{"word":"SYNTHESIS","category":"学術","hint":"統合、総合","level":"hard"},{"word":"BUREAUCRACY","category":"社会","hint":"官僚制度、官僚主義","level":"hard"},{"word":"SOVEREIGNTY","category":"社会","hint":"主権、統治権","level":"hard"},{"word":"IDEOLOGY","category":"社会","hint":"思想体系、イデオロギー","level":"hard"},{"word":"DEMOGRAPHIC","category":"社会","hint":"人口統計上の、人口層の","level":"hard"},{"word":"URBANIZATION","category":"社会","hint":"都市化","level":"hard"},{"word":"NEUROPLASTICITY","category":"科学","hint":"神経可塑性。脳や神経系が変化・適応する性質","level":"hard"},{"word":"HOMEOSTASIS","category":"科学","hint":"恒常性。生体が内部環境を一定に保つ働き","level":"hard"},{"word":"PHOTOSYNTHESIS","category":"科学","hint":"光合成","level":"hard"},{"word":"METABOLISM","category":"科学","hint":"代謝","level":"hard"},{"word":"CONSCIOUSNESS","category":"科学","hint":"意識、意識状態","level":"hard"}];
+  const BANK=[{"word":"ANIMAL","category":"名詞","hint":"動物","level":"easy"},{"word":"APPLE","category":"名詞","hint":"りんご","level":"easy"},{"word":"AUTUMN","category":"名詞","hint":"秋","level":"easy"},{"word":"BEAUTIFUL","category":"形容詞","hint":"美しい","level":"easy"},{"word":"BICYCLE","category":"名詞","hint":"自転車","level":"easy"},{"word":"BREAKFAST","category":"名詞","hint":"朝食","level":"easy"},{"word":"BROTHER","category":"名詞","hint":"兄または弟","level":"easy"},{"word":"BUILDING","category":"名詞","hint":"建物","level":"easy"},{"word":"CALENDAR","category":"名詞","hint":"カレンダー","level":"easy"},{"word":"CAPITAL","category":"名詞","hint":"首都","level":"easy"},{"word":"CHILDREN","category":"名詞","hint":"子どもたち（childの複数形）","level":"easy"},{"word":"COUNTRY","category":"名詞","hint":"国、田舎","level":"easy"},{"word":"DANGER","category":"名詞","hint":"危険","level":"easy"},{"word":"DICTIONARY","category":"名詞","hint":"辞書","level":"easy"},{"word":"DIFFERENT","category":"形容詞","hint":"異なる","level":"easy"},{"word":"DINNER","category":"名詞","hint":"夕食","level":"easy"},{"word":"DOCTOR","category":"名詞","hint":"医師","level":"easy"},{"word":"ELEMENTARY","category":"形容詞","hint":"初等の、基本的な","level":"easy"},{"word":"ENGLISH","category":"名詞","hint":"英語","level":"easy"},{"word":"FAMILY","category":"名詞","hint":"家族","level":"easy"},{"word":"FAMOUS","category":"形容詞","hint":"有名な","level":"easy"},{"word":"FATHER","category":"名詞","hint":"父","level":"easy"},{"word":"FAVORITE","category":"形容詞","hint":"お気に入りの","level":"easy"},{"word":"FEBRUARY","category":"名詞","hint":"2月","level":"easy"},{"word":"FLOWER","category":"名詞","hint":"花","level":"easy"},{"word":"FOREST","category":"名詞","hint":"森林","level":"easy"},{"word":"FRIEND","category":"名詞","hint":"友達","level":"easy"},{"word":"GARDEN","category":"名詞","hint":"庭","level":"easy"},{"word":"GEOGRAPHY","category":"名詞","hint":"地理","level":"easy"},{"word":"HISTORY","category":"名詞","hint":"歴史","level":"easy"},{"word":"HOSPITAL","category":"名詞","hint":"病院","level":"easy"},{"word":"IMPORTANT","category":"形容詞","hint":"重要な","level":"easy"},{"word":"INTERESTING","category":"形容詞","hint":"面白い、興味深い","level":"easy"},{"word":"JAPANESE","category":"名詞","hint":"日本語、日本人","level":"easy"},{"word":"KITCHEN","category":"名詞","hint":"台所","level":"easy"},{"word":"LANGUAGE","category":"名詞","hint":"言語","level":"easy"},{"word":"LIBRARY","category":"名詞","hint":"図書館","level":"easy"},{"word":"MOUNTAIN","category":"名詞","hint":"山","level":"easy"},{"word":"MUSEUM","category":"名詞","hint":"博物館、美術館","level":"easy"},{"word":"NATURE","category":"名詞","hint":"自然","level":"easy"},{"word":"OCEAN","category":"名詞","hint":"海、大洋","level":"easy"},{"word":"PARENTS","category":"名詞","hint":"両親","level":"easy"},{"word":"PEOPLE","category":"名詞","hint":"人々","level":"easy"},{"word":"PICTURE","category":"名詞","hint":"絵、写真","level":"easy"},{"word":"QUESTION","category":"名詞","hint":"質問、問題","level":"easy"},{"word":"SCIENCE","category":"名詞","hint":"理科、科学","level":"easy"},{"word":"SEASON","category":"名詞","hint":"季節","level":"easy"},{"word":"STUDENT","category":"名詞","hint":"生徒、学生","level":"easy"},{"word":"TEACHER","category":"名詞","hint":"先生","level":"easy"},{"word":"WEATHER","category":"名詞","hint":"天気","level":"easy"},{"word":"ACCEPT","category":"動詞","hint":"受け入れる","level":"normal"},{"word":"ACTUALLY","category":"副詞","hint":"実際には","level":"normal"},{"word":"ADVANTAGE","category":"名詞","hint":"利点、有利な点","level":"normal"},{"word":"ADVICE","category":"名詞","hint":"助言","level":"normal"},{"word":"AGREE","category":"動詞","hint":"賛成する、同意する","level":"normal"},{"word":"ALTHOUGH","category":"接続詞","hint":"〜だけれども","level":"normal"},{"word":"APPEAR","category":"動詞","hint":"現れる、〜のように見える","level":"normal"},{"word":"ARRIVE","category":"動詞","hint":"到着する","level":"normal"},{"word":"BECAUSE","category":"接続詞","hint":"なぜなら〜だから","level":"normal"},{"word":"BELIEVE","category":"動詞","hint":"信じる","level":"normal"},{"word":"BORROW","category":"動詞","hint":"借りる","level":"normal"},{"word":"CHOOSE","category":"動詞","hint":"選ぶ","level":"normal"},{"word":"COMPARE","category":"動詞","hint":"比較する","level":"normal"},{"word":"CONTINUE","category":"動詞","hint":"続ける","level":"normal"},{"word":"CULTURE","category":"名詞","hint":"文化","level":"normal"},{"word":"DECIDE","category":"動詞","hint":"決める","level":"normal"},{"word":"DEVELOP","category":"動詞","hint":"発達する、開発する","level":"normal"},{"word":"DISCOVER","category":"動詞","hint":"発見する","level":"normal"},{"word":"EDUCATION","category":"名詞","hint":"教育","level":"normal"},{"word":"EFFECT","category":"名詞","hint":"影響、効果","level":"normal"},{"word":"ENVIRONMENT","category":"名詞","hint":"環境","level":"normal"},{"word":"EXPERIENCE","category":"名詞","hint":"経験","level":"normal"},{"word":"EXPLAIN","category":"動詞","hint":"説明する","level":"normal"},{"word":"FACTORY","category":"名詞","hint":"工場","level":"normal"},{"word":"FUTURE","category":"名詞","hint":"未来","level":"normal"},{"word":"HEALTH","category":"名詞","hint":"健康","level":"normal"},{"word":"IMAGINE","category":"動詞","hint":"想像する","level":"normal"},{"word":"IMPROVE","category":"動詞","hint":"改善する、上達する","level":"normal"},{"word":"INFORMATION","category":"名詞","hint":"情報","level":"normal"},{"word":"INSTEAD","category":"副詞","hint":"その代わりに","level":"normal"},{"word":"INVENT","category":"動詞","hint":"発明する","level":"normal"},{"word":"KNOWLEDGE","category":"名詞","hint":"知識","level":"normal"},{"word":"NECESSARY","category":"形容詞","hint":"必要な","level":"normal"},{"word":"OPINION","category":"名詞","hint":"意見","level":"normal"},{"word":"OPPORTUNITY","category":"名詞","hint":"機会","level":"normal"},{"word":"POLLUTION","category":"名詞","hint":"汚染","level":"normal"},{"word":"POPULATION","category":"名詞","hint":"人口","level":"normal"},{"word":"POSSIBLE","category":"形容詞","hint":"可能な","level":"normal"},{"word":"PROBLEM","category":"名詞","hint":"問題","level":"normal"},{"word":"PROTECT","category":"動詞","hint":"保護する","level":"normal"},{"word":"REASON","category":"名詞","hint":"理由","level":"normal"},{"word":"RECEIVE","category":"動詞","hint":"受け取る","level":"normal"},{"word":"RECYCLE","category":"動詞","hint":"再利用する","level":"normal"},{"word":"RELATIONSHIP","category":"名詞","hint":"関係","level":"normal"},{"word":"RESULT","category":"名詞","hint":"結果","level":"normal"},{"word":"SOCIETY","category":"名詞","hint":"社会","level":"normal"},{"word":"SOLUTION","category":"名詞","hint":"解決策","level":"normal"},{"word":"SUGGEST","category":"動詞","hint":"提案する","level":"normal"},{"word":"TECHNOLOGY","category":"名詞","hint":"技術","level":"normal"},{"word":"TRADITION","category":"名詞","hint":"伝統","level":"normal"},{"word":"ABANDON","category":"動詞","hint":"捨てる、断念する","level":"hard"},{"word":"ABSTRACT","category":"形容詞","hint":"抽象的な","level":"hard"},{"word":"ACCOMPLISH","category":"動詞","hint":"成し遂げる","level":"hard"},{"word":"ACQUIRE","category":"動詞","hint":"獲得する、習得する","level":"hard"},{"word":"ADAPT","category":"動詞","hint":"適応する","level":"hard"},{"word":"ADEQUATE","category":"形容詞","hint":"十分な、適切な","level":"hard"},{"word":"ADVOCATE","category":"動詞","hint":"支持する、提唱する","level":"hard"},{"word":"ANALYSIS","category":"名詞","hint":"分析","level":"hard"},{"word":"ANTICIPATE","category":"動詞","hint":"予期する","level":"hard"},{"word":"APPROACH","category":"名詞","hint":"方法、取り組み方","level":"hard"},{"word":"APPROPRIATE","category":"形容詞","hint":"適切な","level":"hard"},{"word":"ASSUMPTION","category":"名詞","hint":"仮定、思い込み","level":"hard"},{"word":"ATTITUDE","category":"名詞","hint":"態度、考え方","level":"hard"},{"word":"CAPACITY","category":"名詞","hint":"能力、収容力","level":"hard"},{"word":"CIRCUMSTANCE","category":"名詞","hint":"状況、事情","level":"hard"},{"word":"COHERENT","category":"形容詞","hint":"首尾一貫した","level":"hard"},{"word":"COMPLEX","category":"形容詞","hint":"複雑な","level":"hard"},{"word":"CONCEPT","category":"名詞","hint":"概念","level":"hard"},{"word":"CONSEQUENCE","category":"名詞","hint":"結果、帰結","level":"hard"},{"word":"CONSIDERABLE","category":"形容詞","hint":"かなりの","level":"hard"},{"word":"CONSTITUTE","category":"動詞","hint":"構成する","level":"hard"},{"word":"CONTRADICT","category":"動詞","hint":"矛盾する、反論する","level":"hard"},{"word":"CONTROVERSY","category":"名詞","hint":"論争","level":"hard"},{"word":"CONVENTIONAL","category":"形容詞","hint":"従来の、慣習的な","level":"hard"},{"word":"CRUCIAL","category":"形容詞","hint":"極めて重要な","level":"hard"},{"word":"DECLINE","category":"動詞","hint":"減少する、衰える","level":"hard"},{"word":"DEMONSTRATE","category":"動詞","hint":"実証する、示す","level":"hard"},{"word":"DERIVE","category":"動詞","hint":"由来する、引き出す","level":"hard"},{"word":"DISTRIBUTION","category":"名詞","hint":"分布、配布","level":"hard"},{"word":"DIVERSITY","category":"名詞","hint":"多様性","level":"hard"},{"word":"EMPHASIZE","category":"動詞","hint":"強調する","level":"hard"},{"word":"EVIDENCE","category":"名詞","hint":"証拠、根拠","level":"hard"},{"word":"EVOLUTION","category":"名詞","hint":"進化","level":"hard"},{"word":"EXPLICIT","category":"形容詞","hint":"明白な、明示的な","level":"hard"},{"word":"FACILITATE","category":"動詞","hint":"促進する、容易にする","level":"hard"},{"word":"FUNDAMENTAL","category":"形容詞","hint":"根本的な、基本的な","level":"hard"},{"word":"HYPOTHESIS","category":"名詞","hint":"仮説","level":"hard"},{"word":"IMPACT","category":"名詞","hint":"影響、衝撃","level":"hard"},{"word":"IMPLEMENT","category":"動詞","hint":"実行する、実施する","level":"hard"},{"word":"INEVITABLE","category":"形容詞","hint":"避けられない、必然的な","level":"hard"},{"word":"INTERPRET","category":"動詞","hint":"解釈する","level":"hard"},{"word":"JUSTIFY","category":"動詞","hint":"正当化する","level":"hard"},{"word":"MAINTAIN","category":"動詞","hint":"維持する、主張する","level":"hard"},{"word":"PERCEIVE","category":"動詞","hint":"知覚する、認識する","level":"hard"},{"word":"PERSPECTIVE","category":"名詞","hint":"観点、見方","level":"hard"},{"word":"PHENOMENON","category":"名詞","hint":"現象","level":"hard"},{"word":"PRESERVE","category":"動詞","hint":"保存する、保護する","level":"hard"},{"word":"RELEVANT","category":"形容詞","hint":"関連のある","level":"hard"},{"word":"SIGNIFICANT","category":"形容詞","hint":"重要な、かなりの","level":"hard"},{"word":"SUSTAINABLE","category":"形容詞","hint":"持続可能な","level":"hard"}];
   const API='https://hangman-auth.okazakiat.workers.dev/token';
   const $=id=>document.getElementById(id);
   const store=localStorage;
@@ -1301,9 +1270,8 @@
   }
   async function nextRound(){
     if(!amHost||!rival||!isOnline()||(game&&!game.finished)||busy)return;
-    const level=$('difficulty').value,category=$('categorySelect').value;
-    let pool=BANK.map((item,index)=>({item,index})).filter(o=>o.item.level===level&&(category==='all'||o.item.category===category));
-    if(!pool.length)pool=BANK.map((item,index)=>({item,index})).filter(o=>category==='all'||o.item.category===category);
+    const level=$('difficulty').value;
+    const pool=BANK.map((item,index)=>({item,index})).filter(o=>o.item.level===level);
     if(!pool.length){notice('問題がありません。');return;}
     const index=pool[Math.floor(Math.random()*pool.length)].index;
     const previous=game;
