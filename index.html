@@ -445,6 +445,16 @@
   .online .entryRow select{width:100%;height:44px;background:#fffbea;border:2px solid #80775a;border-radius:5px;padding:4px;font:inherit;font-size:14px}
   .online .entryRow input{font-variant-numeric:tabular-nums;letter-spacing:.10em}
   .online .sumPoints{font-size:13px;font-weight:bold;color:#334a2e;margin:3px 0 6px}
+  .online .nameHandicapRow{display:grid;grid-template-columns:minmax(0,1fr) 105px;gap:9px;align-items:end}
+  .online .nameHandicapRow select{width:100%;min-height:44px;background:#fffbea;border:2px solid #80775a;border-radius:5px;font:inherit;font-size:16px}
+  .online .playerTitle{display:flex;justify-content:space-between;align-items:flex-start;gap:5px;margin-bottom:5px;flex-wrap:wrap}
+  .online .playerTitle strong{margin:0;flex:1 1 auto}
+  .online .handicapControl{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:bold;white-space:nowrap;margin:0}
+  .online .handicapControl select{min-width:43px;height:30px;font:inherit;font-size:14px;background:#fffbea;border:1px solid #80775a;border-radius:4px}
+  .online .opponentHandicap{font-size:11px;white-space:nowrap;color:#45513b}
+  .key.handicapHidden{background:#777c70!important;color:#f4eed9!important;opacity:.9!important;border-color:#484d45!important;box-shadow:none!important;font-size:19px!important}
+  .key.handicapHidden:disabled{transform:none!important}
+
   @media(max-width:430px){.online{padding:9px;border-width:4px}.online .entryRow{grid-template-columns:minmax(110px,1fr) minmax(0,1.1fr)}.online .entryRow button{padding:5px 3px;font-size:13px}}
 </style>
 </head>
@@ -511,14 +521,14 @@
       <div id="turnBanner" class="turnBanner">交互に1文字ずつ入力して得点を競います</div>
       <div id="matchView" class="hide">
         <div class="og matchPlayers">
-          <div class="player" id="meCard"><strong id="meName">自分</strong><div class="points"><span id="mePoints">0</span> 点</div><div class="sumPoints">合計：<span id="meTotal">0</span>点</div><div id="meProgress">待機中</div></div>
-          <div class="player" id="rivalCard"><strong id="rivalName">相手</strong><div class="points"><span id="rivalPoints">0</span> 点</div><div class="sumPoints">合計：<span id="rivalTotal">0</span>点</div><div id="rivalProgress">待機中</div></div>
+          <div class="player" id="meCard"><div class="playerTitle"><strong id="meName">自分</strong><label class="handicapControl" for="matchHandicap">ハンデ <select id="matchHandicap" aria-label="自分のハンデ"></select></label></div><div class="points"><span id="mePoints">0</span> 点</div><div class="sumPoints">合計：<span id="meTotal">0</span>点</div><div id="meProgress">待機中</div></div>
+          <div class="player" id="rivalCard"><div class="playerTitle"><strong id="rivalName">相手</strong><span class="opponentHandicap" id="rivalHandicap">ハンデ：-</span></div><div class="points"><span id="rivalPoints">0</span> 点</div><div class="sumPoints">合計：<span id="rivalTotal">0</span>点</div><div id="rivalProgress">待機中</div></div>
         </div>
         <button class="matchNext hide" id="startBattle" type="button">対戦開始</button>
       </div>
     </div>
     <div id="lobby">
-      <div><label for="onlineName">プレイヤー名</label><input id="onlineName" maxlength="14" placeholder="プレイヤー名"></div>
+      <div class="nameHandicapRow"><div><label for="onlineName">プレイヤー名</label><input id="onlineName" maxlength="14" placeholder="プレイヤー名"></div><div><label for="lobbyHandicap">ハンデ（0～9）</label><select id="lobbyHandicap" aria-label="ハンデ"></select></div></div>
       <div class="entryRow">
         <button id="makeRoom" type="button">部屋を作成</button>
         <div><label for="difficulty">受験レベル</label><select id="difficulty"><option value="easy">中学受験</option><option value="normal">高校受験</option><option value="hard" selected>大学受験</option></select></div>
@@ -1078,6 +1088,52 @@
   let client=null, channel=null, myId='', code='', amHost=false, ready=false;
   let rival=null, game=null, totals=[0,0], pending=false, hostResponded=false;
   let joinTimer=null, sessionId='', guestRequestId=null, busy=false;
+  // 自分のハンデで伏せた文字は端末内でのみ管理し、Ablyには送信しない
+  let handicapLetters=new Set(), handicapRound='', myHandicap=0;
+  const handicapValue=()=>myHandicap;
+  function randomHidden(word,count){
+    const pool=[...letters].filter(ch=>!word.includes(ch));
+    // 暗号学的乱数で混ぜ、各プレーヤーが独立して伏せ字を決定する
+    for(let i=pool.length-1;i>0;i--){
+      const b=new Uint32Array(1);crypto.getRandomValues(b);
+      const j=b[0]%(i+1);[pool[i],pool[j]]=[pool[j],pool[i]];
+    }
+    return new Set(pool.slice(0,Math.min(count,pool.length)));
+  }
+  function ensureHandicap(){
+    if(!game){handicapRound='';handicapLetters.clear();return;}
+    if(handicapRound!==game.round){
+      handicapRound=game.round;
+      handicapLetters=randomHidden(game.item.word,handicapValue());
+    }
+  }
+  function paintHandicap(){
+    document.querySelectorAll('.key').forEach(b=>{
+      const hidden=!!game&&handicapLetters.has(b.dataset.letter);
+      b.classList.toggle('handicapHidden',hidden);
+      b.textContent=hidden?'？':b.dataset.letter;
+      if(hidden)b.disabled=true;
+      b.setAttribute('aria-label',hidden?'ハンデで使用不可':b.dataset.letter);
+    });
+  }
+  function setHandicap(value){
+    const n=Math.max(0,Math.min(9,Number(value)||0));
+    if(game&&!game.finished){
+      $('lobbyHandicap').value=String(myHandicap);
+      $('matchHandicap').value=String(myHandicap);
+      return;
+    }
+    myHandicap=n;
+    store.setItem('hm_ably_handicap',String(n));
+    $('lobbyHandicap').value=String(n);
+    $('matchHandicap').value=String(n);
+    // 部屋の待機中のみ変更を相手へ通知する。伏せる文字そのものは共有しない
+    if(channel){
+      channel.presence.update({name:name(),role:amHost?'host':'guest',session:sessionId,handicap:n}).catch(e=>notice('ハンデ通知エラー：'+err(e)));
+      send('handicap',{value:n}).catch(()=>{});
+    }
+    updateUI();
+  }
   const randomCode=()=>{const a=new Uint32Array(1);crypto.getRandomValues(a);return String(100000+(a[0]%900000));};
   const name=()=>{const n=$('onlineName').value.trim().slice(0,14)||'プレイヤー';store.setItem('hm_ably_name',n);return n;};
   const notice=t=>{$('onlineStatus').textContent=t;};
@@ -1097,6 +1153,9 @@
     window.hmOnlineMyTurn=yourTurn();
     $('meName').textContent=`プレーヤー${myNumber()}：${name()}`;
     $('rivalName').textContent=`プレーヤー${amHost?2:1}：${rival?.name||'参加待ち'}`;
+    $('rivalHandicap').textContent=rival?`ハンデ：${Number.isInteger(rival.handicap)?rival.handicap:'-'}`:'ハンデ：-';
+    $('matchHandicap').disabled=!!game&&!game.finished;
+    $('lobbyHandicap').disabled=!!game&&!game.finished;
     $('mePoints').textContent=game?game.points[myNumber()-1]:0;
     $('rivalPoints').textContent=game?game.points[amHost?1:0]:0;
     $('meTotal').textContent=totals[myNumber()-1];
@@ -1109,10 +1168,12 @@
     $('startBattle').disabled=!isOnline()||!rival||(!!game&&!game.finished)||busy;
     $('startBattle').textContent=game?'次の問題を開始':'対戦開始';
     $('turnBanner').textContent=!game?'プレーヤー1が問題を開始します':game.finished?'対戦終了・得点を比較しました':yourTurn()?'あなたの番です：1文字選択してください':`プレーヤー${game.turn}の番です`;
-    if(!game)return;
+    if(!game){paintHandicap();return;}
+    ensureHandicap();
     window.hmOnlineRender(game.item,game.guessed,game.level,game.finished);
     // 入力を受け付ける側だけ未使用キーを有効にする
-    document.querySelectorAll('.key').forEach(b=>{b.disabled=game.guessed.includes(b.dataset.letter)||!yourTurn();});
+    document.querySelectorAll('.key').forEach(b=>{b.disabled=game.guessed.includes(b.dataset.letter)||!yourTurn()||handicapLetters.has(b.dataset.letter);});
+    paintHandicap();
     const last=game.last;
     if(last){
       message(`プレーヤー${last.player}${last.hit?'正解':'不正解'}${last.hit?`！「${last.letter}」で${last.hit}点獲得`:`（${last.letter}）`}。${game.finished?'勝敗が決まりました。':`次はプレーヤー${game.turn}の番です。`}`);
@@ -1162,6 +1223,7 @@
     if(channel)throw Error('既に部屋に参加しています。');
     await connect();
     code=id;amHost=host;ready=false;rival=null;game=null;totals=[0,0];pending=false;hostResponded=false;guestRequestId=null;busy=false;
+    handicapRound='';handicapLetters.clear();
     sessionId=crypto.randomUUID();
     window.hmOnlineActive=true;window.hmOnlineMyTurn=false;
     $('lobby').classList.add('hide');$('roomView').classList.remove('hide');$('matchView').classList.remove('hide');
@@ -1172,13 +1234,13 @@
     channel.subscribe(handle);
     channel.presence.subscribe(onPresence);
     await channel.attach();
-    await channel.presence.enter({name:name(),role:host?'host':'guest',session:sessionId});
+    await channel.presence.enter({name:name(),role:host?'host':'guest',session:sessionId,handicap:myHandicap});
     ready=true;
     await onPresence();
     if(host)notice('部屋を作成しました。プレーヤー2をお待ちください。');
     else{
       notice('プレーヤー1に参加を通知しています。');
-      await send('hello',{name:name()});
+      await send('hello',{name:name(),handicap:myHandicap});
       joinTimer=setTimeout(()=>{if(!hostResponded&&code===id)notice('プレーヤー1から応答がありません。部屋番号をご確認ください。');},9000);
     }
     updateUI();
@@ -1191,11 +1253,11 @@
       const others=players.filter(m=>m.clientId!==myId);
       if(amHost){
         const guest=others.find(m=>m.data.role==='guest');
-        if(guest)rival={id:guest.clientId,name:guest.data.name||'プレーヤー2'};
+        if(guest)rival={id:guest.clientId,name:guest.data.name||'プレーヤー2',handicap:Number.isInteger(guest.data.handicap)?guest.data.handicap:null};
         else{rival=null;if(game&&!game.finished)notice('プレーヤー2の再接続を待っています。');}
       }else{
         const host=others.find(m=>m.data.role==='host');
-        if(host)rival={id:host.clientId,name:host.data.name||'プレーヤー1'};
+        if(host)rival={id:host.clientId,name:host.data.name||'プレーヤー1',handicap:Number.isInteger(host.data.handicap)?host.data.handicap:null};
       }
       if(players.filter(m=>m.data.role==='host').length!==1||players.filter(m=>m.data.role==='guest').length>1){
         if(players.length>2)notice('この部屋には2人だけ接続してください。');
@@ -1214,6 +1276,7 @@
       ?state.totals.map(n=>Math.max(0,Math.floor(Number(n)||0))):[0,0];
     game={round:state.round,index:state.index,item:BANK[state.index],level:state.level,turn:state.turn===2?2:1,guessed,points,seq:Number.isInteger(state.seq)?state.seq:0,finished:Boolean(state.finished),last:state.last||null};
     pending=false;
+    ensureHandicap();
     updateUI();
     if(!game.finished)notice('対戦中：順番に1文字ずつ入力してください。');
   }
@@ -1247,21 +1310,25 @@
   function handle(msg){
     const m=msg.data;
     if(!m||!m.sender||m.sender===myId)return;
+    if(msg.name==='handicap'&&rival&&m.sender===rival.id){
+      rival.handicap=Number.isInteger(m.value)&&m.value>=0&&m.value<=9?m.value:null;
+      updateUI();return;
+    }
     if(msg.name==='hello'&&amHost){
       if(rival&&rival.id!==m.sender)return;
-      rival={id:m.sender,name:String(m.name||'プレーヤー2').slice(0,14)};
-      send('welcome',{guestId:m.sender,name:name(),snapshot:snapshot()}).catch(e=>notice(err(e)));
+      rival={id:m.sender,name:String(m.name||'プレーヤー2').slice(0,14),handicap:Number.isInteger(m.handicap)?m.handicap:null};
+      send('welcome',{guestId:m.sender,name:name(),handicap:myHandicap,snapshot:snapshot()}).catch(e=>notice(err(e)));
       updateUI();return;
     }
     if(msg.name==='welcome'&&!amHost&&m.guestId===myId){
       hostResponded=true;clearTimeout(joinTimer);
-      rival={id:m.sender,name:String(m.name||'プレーヤー1').slice(0,14)};
+      rival={id:m.sender,name:String(m.name||'プレーヤー1').slice(0,14),handicap:Number.isInteger(m.handicap)?m.handicap:null};
       if(m.snapshot)adopt(m.snapshot);
       notice('プレーヤー1に接続しました。');updateUI();return;
     }
     if(msg.name==='sync-request'&&amHost){
       if(!rival||m.sender!==rival.id)return;
-      send('welcome',{guestId:m.sender,name:name(),snapshot:snapshot()}).catch(()=>{});return;
+      send('welcome',{guestId:m.sender,name:name(),handicap:myHandicap,snapshot:snapshot()}).catch(()=>{});return;
     }
     if(msg.name==='state'&&!amHost){
       if(rival&&rival.id!==m.sender)return;
@@ -1284,6 +1351,7 @@
     const index=pool[Math.floor(Math.random()*pool.length)].index;
     const previous=game;
     game={round:crypto.randomUUID(),index,item:BANK[index],level,turn:1,guessed:[],points:[0,0],seq:0,finished:false,last:null};
+    ensureHandicap();
     updateUI();
     busy=true;
     try{await publishState();notice('新しい問題が始まりました。プレーヤー1の番です。');}
@@ -1291,8 +1359,8 @@
     finally{busy=false;updateUI();}
   }
   async function onlineGuess(ch){
-    if(!isOnline()||!yourTurn()||busy||!letters.includes(ch))return;
-    if(game.guessed.includes(ch))return;
+    if(!isOnline()||!yourTurn()||busy||!letters.includes(ch)||handicapLetters.has(ch))return;
+    if(game.guessed.includes(ch)||handicapLetters.has(ch))return;
     if(amHost){await applyGuess(1,ch);return;}
     if(pending)return;
     pending=true;updateUI();
@@ -1314,6 +1382,7 @@
     clearTimeout(joinTimer);
     try{if(channel){await send('leave');await channel.presence.leave();channel.unsubscribe();channel.presence.unsubscribe();await channel.detach();}}catch(e){}
     channel=null;code='';ready=false;rival=null;game=null;totals=[0,0];pending=false;hostResponded=false;busy=false;
+    handicapRound='';handicapLetters.clear();paintHandicap();
     window.hmOnlineActive=false;window.hmOnlineMyTurn=false;
     $('lobby').classList.remove('hide');$('roomView').classList.add('hide');$('matchView').classList.add('hide');
     $('newGameBtn').disabled=false;$('difficulty').disabled=false;$('categorySelect').disabled=false;
@@ -1321,6 +1390,14 @@
     $('turnBanner').textContent='交互に1文字ずつ入力して得点を競います';
   }
   $('onlineName').value=store.getItem('hm_ably_name')||'プレイヤー';
+  for(const id of ['lobbyHandicap','matchHandicap']){
+    for(let n=0;n<=9;n++){
+      const opt=document.createElement('option');opt.value=String(n);opt.textContent=String(n);
+      $(id).appendChild(opt);
+    }
+    $(id).addEventListener('change',e=>setHandicap(e.target.value));
+  }
+  setHandicap(store.getItem('hm_ably_handicap')||'0');
   const invited=new URLSearchParams(location.search).get('room');
   if(invited&&safeRoom(invited))$('joinCode').value=invited;
   $('makeRoom').addEventListener('click',async()=>{
