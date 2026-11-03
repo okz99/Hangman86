@@ -521,14 +521,14 @@
       <div id="turnBanner" class="turnBanner">交互に1文字ずつ入力して得点を競います</div>
       <div id="matchView" class="hide">
         <div class="og matchPlayers">
-          <div class="player" id="meCard"><div class="playerTitle"><strong id="meName">自分</strong><label class="handicapControl" for="matchHandicap">ハンデ <select id="matchHandicap" aria-label="自分のハンデ"></select></label></div><div class="points"><span id="mePoints">0</span> 点</div><div class="sumPoints">合計：<span id="meTotal">0</span>点</div><div id="meProgress">待機中</div></div>
+          <div class="player" id="meCard"><div class="playerTitle"><strong id="meName">自分</strong><span class="opponentHandicap" id="myHandicapLabel">ハンデ：0</span></div><div class="points"><span id="mePoints">0</span> 点</div><div class="sumPoints">合計：<span id="meTotal">0</span>点</div><div id="meProgress">待機中</div></div>
           <div class="player" id="rivalCard"><div class="playerTitle"><strong id="rivalName">相手</strong><span class="opponentHandicap" id="rivalHandicap">ハンデ：-</span></div><div class="points"><span id="rivalPoints">0</span> 点</div><div class="sumPoints">合計：<span id="rivalTotal">0</span>点</div><div id="rivalProgress">待機中</div></div>
         </div>
         <button class="matchNext hide" id="startBattle" type="button">対戦開始</button>
       </div>
     </div>
     <div id="lobby">
-      <div class="nameHandicapRow"><div><label for="onlineName">プレイヤー名</label><input id="onlineName" maxlength="14" placeholder="プレイヤー名"></div><div><label for="lobbyHandicap">ハンデ（0～9）</label><select id="lobbyHandicap" aria-label="ハンデ"></select></div></div>
+      <div class="nameHandicapRow"><div><label for="onlineName">プレイヤー名</label><input id="onlineName" maxlength="14" placeholder="プレイヤー名"></div><div><label for="lobbyHandicap">ハンデ（0～9）</label><select id="lobbyHandicap" aria-label="入室前に設定するハンデ"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select></div></div>
       <div class="entryRow">
         <button id="makeRoom" type="button">部屋を作成</button>
         <div><label for="difficulty">受験レベル</label><select id="difficulty"><option value="easy">中学受験</option><option value="normal">高校受験</option><option value="hard" selected>大学受験</option></select></div>
@@ -1117,22 +1117,16 @@
     });
   }
   function setHandicap(value){
-    const n=Math.max(0,Math.min(9,Number(value)||0));
-    if(game&&!game.finished){
+    // 部屋に入った後は、ハンデを変更できない
+    if(code || channel){
       $('lobbyHandicap').value=String(myHandicap);
-      $('matchHandicap').value=String(myHandicap);
       return;
     }
+    const n=Math.max(0,Math.min(9,Number(value)||0));
     myHandicap=n;
     store.setItem('hm_ably_handicap',String(n));
     $('lobbyHandicap').value=String(n);
-    $('matchHandicap').value=String(n);
-    // 部屋の待機中のみ変更を相手へ通知する。伏せる文字そのものは共有しない
-    if(channel){
-      channel.presence.update({name:name(),role:amHost?'host':'guest',session:sessionId,handicap:n}).catch(e=>notice('ハンデ通知エラー：'+err(e)));
-      send('handicap',{value:n}).catch(()=>{});
-    }
-    updateUI();
+    $('myHandicapLabel').textContent=`ハンデ：${n}`;
   }
   const randomCode=()=>{const a=new Uint32Array(1);crypto.getRandomValues(a);return String(100000+(a[0]%900000));};
   const name=()=>{const n=$('onlineName').value.trim().slice(0,14)||'プレイヤー';store.setItem('hm_ably_name',n);return n;};
@@ -1154,8 +1148,7 @@
     $('meName').textContent=`プレーヤー${myNumber()}：${name()}`;
     $('rivalName').textContent=`プレーヤー${amHost?2:1}：${rival?.name||'参加待ち'}`;
     $('rivalHandicap').textContent=rival?`ハンデ：${Number.isInteger(rival.handicap)?rival.handicap:'-'}`:'ハンデ：-';
-    $('matchHandicap').disabled=!!game&&!game.finished;
-    $('lobbyHandicap').disabled=!!game&&!game.finished;
+    $('myHandicapLabel').textContent=`ハンデ：${myHandicap}`;
     $('mePoints').textContent=game?game.points[myNumber()-1]:0;
     $('rivalPoints').textContent=game?game.points[amHost?1:0]:0;
     $('meTotal').textContent=totals[myNumber()-1];
@@ -1390,13 +1383,7 @@
     $('turnBanner').textContent='交互に1文字ずつ入力して得点を競います';
   }
   $('onlineName').value=store.getItem('hm_ably_name')||'プレイヤー';
-  for(const id of ['lobbyHandicap','matchHandicap']){
-    for(let n=0;n<=9;n++){
-      const opt=document.createElement('option');opt.value=String(n);opt.textContent=String(n);
-      $(id).appendChild(opt);
-    }
-    $(id).addEventListener('change',e=>setHandicap(e.target.value));
-  }
+  $('lobbyHandicap').addEventListener('change',e=>setHandicap(e.target.value));
   setHandicap(store.getItem('hm_ably_handicap')||'0');
   const invited=new URLSearchParams(location.search).get('room');
   if(invited&&safeRoom(invited))$('joinCode').value=invited;
