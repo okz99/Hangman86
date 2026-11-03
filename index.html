@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>HANGMAN '86 - UNIVERSITY ENTRANCE ENGLISH</title>
+<title>HANGMAN '86 - 交互入力・得点対戦</title>
 <style>
   :root{
     --ink:#182117;
@@ -427,6 +427,10 @@
   .online .player strong{display:block;font-size:14px;margin-bottom:4px}
   .online .tiny{font-size:11px;line-height:1.5;margin:8px 0 0}
   .online .hide{display:none!important}
+  .online .points{font-size:25px;font-weight:900;color:var(--green);line-height:1.3}
+  .online .turnBanner{padding:10px 7px;text-align:center;border:3px solid var(--green);background:#fff2b5;color:var(--green);font-size:16px;font-weight:bold;line-height:1.45}
+  .online .player.turn{background:#f8e2a0;border-color:#367440;box-shadow:inset 0 0 0 2px #367440}
+  .online .player{transition:background .15s}
   @media(max-width:430px){.online{padding:9px;border-width:4px}}
 </style>
 </head>
@@ -489,6 +493,7 @@
 
   <section class="online" id="online">
     <h2>対戦モード / ABLY</h2>
+    <div id="turnBanner" class="turnBanner">交互に1文字ずつ入力して得点を競います</div>
     <div class="og" id="lobby">
       <div class="wide"><label for="onlineName">プレイヤー名</label><input id="onlineName" maxlength="14" placeholder="プレイヤー名"></div>
       <button id="makeRoom" type="button">部屋を作成</button>
@@ -501,14 +506,14 @@
       <div class="og">
         <button class="secondary" type="button" id="copyCode">番号をコピー</button>
         <button class="secondary" type="button" id="shareLink">招待リンクを共有</button>
-        <div class="player"><strong id="meName">自分</strong><div id="meProgress">待機中</div></div>
-        <div class="player"><strong id="rivalName">相手</strong><div id="rivalProgress">待機中</div></div>
+        <div class="player" id="meCard"><strong id="meName">自分</strong><div class="points"><span id="mePoints">0</span> 点</div><div id="meProgress">待機中</div></div>
+        <div class="player" id="rivalCard"><strong id="rivalName">相手</strong><div class="points"><span id="rivalPoints">0</span> 点</div><div id="rivalProgress">待機中</div></div>
         <button class="wide hide" id="startBattle" type="button">対戦開始</button>
         <button class="wide secondary" id="leaveBattle" type="button">退出</button>
       </div>
     </div>
     <div id="onlineStatus" class="status" role="status">対戦にはインターネットが必要です。部屋を作成するか、部屋番号を入力して参加してください。</div>
-    <p class="tiny">ルール：同じ英単語をそれぞれ解き、先に完成した人が勝ちです。両者とも失敗した場合は引き分けです。ホストが問題を選びます。</p>
+    <p class="tiny">ルール：プレーヤー1と2が交互に1文字入力します。正解文字が複数あれば出現個数がそのまま得点になります。正解・不正解とも次は相手の番です。全ての文字が開いた時点で高得点の人が勝利し、同点は引き分けです。</p>
   </section>
   <div class="controls">
     <div class="panel">
@@ -908,7 +913,7 @@
   }
 
   function drawHangman(){
-    const max = MAX_MISTAKES[els.difficulty.value];
+    const max = window.hmOnlineActive ? Math.max(6, mistakes + 1) : MAX_MISTAKES[els.difficulty.value];
     const progress = max === 0 ? 0 : mistakes / max;
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -1009,7 +1014,7 @@
     // 画面左下の残機風表示
     const remaining = Math.max(0, max - mistakes);
     ctx.font = "bold 14px Courier New";
-    ctx.fillText(`CHANCE ${remaining}`, 70, 274);
+    ctx.fillText(window.hmOnlineActive ? `MISS ${mistakes}` : `CHANCE ${remaining}`, 70, 274);
 
     ctx.restore();
   }
@@ -1030,7 +1035,7 @@
     drawHangman();
     document.querySelectorAll('.key').forEach(b => {
       const c=b.dataset.letter;
-      b.disabled = guessed.has(c) || finished;
+      b.disabled = guessed.has(c) || finished || !window.hmOnlineMyTurn;
       b.classList.toggle('hit', guessed.has(c) && item.word.includes(c));
       b.classList.toggle('misskey', guessed.has(c) && !item.word.includes(c));
     });
@@ -1080,101 +1085,103 @@
 <script>
 (() => {
   'use strict';
-  // 元の英単語データを使用する
+  // 同一ルームのプレイヤー1（ホスト）がターンと点数の確定権限を持つ
   const BANK=[{"word":"ACHIEVE","category":"動詞","hint":"達成する。目標や成功を手に入れること","level":"easy"},{"word":"ACQUIRE","category":"動詞","hint":"獲得する。知識・技能・財産などを得ること","level":"easy"},{"word":"ADAPT","category":"動詞","hint":"適応する。環境や状況に合わせて変化すること","level":"easy"},{"word":"ASSUME","category":"動詞","hint":"〜だと思い込む、仮定する","level":"easy"},{"word":"CONSUME","category":"動詞","hint":"消費する。時間・エネルギー・資源などを使うこと","level":"easy"},{"word":"DECLINE","category":"動詞","hint":"減少する、衰える、断る","level":"easy"},{"word":"ESTABLISH","category":"動詞","hint":"設立する、確立する","level":"easy"},{"word":"MAINTAIN","category":"動詞","hint":"維持する、主張する","level":"easy"},{"word":"OBTAIN","category":"動詞","hint":"得る、入手する","level":"easy"},{"word":"REQUIRE","category":"動詞","hint":"必要とする、要求する","level":"easy"},{"word":"ANCIENT","category":"形容詞","hint":"古代の、とても古い","level":"easy"},{"word":"APPARENT","category":"形容詞","hint":"明らかな、見かけ上の","level":"easy"},{"word":"ESSENTIAL","category":"形容詞","hint":"不可欠な、本質的な","level":"easy"},{"word":"FREQUENT","category":"形容詞","hint":"頻繁な","level":"easy"},{"word":"INDIVIDUAL","category":"形容詞","hint":"個々の、個人の","level":"easy"},{"word":"POTENTIAL","category":"形容詞","hint":"潜在的な、可能性のある","level":"easy"},{"word":"RELEVANT","category":"形容詞","hint":"関連のある、適切な","level":"easy"},{"word":"SIGNIFICANT","category":"形容詞","hint":"重要な、かなりの、意味のある","level":"easy"},{"word":"ATTITUDE","category":"抽象語","hint":"態度、考え方","level":"easy"},{"word":"CONCEPT","category":"抽象語","hint":"概念、考え","level":"easy"},{"word":"CONTEXT","category":"抽象語","hint":"文脈、状況","level":"easy"},{"word":"EVIDENCE","category":"抽象語","hint":"証拠、根拠","level":"easy"},{"word":"FEATURE","category":"抽象語","hint":"特徴、特色","level":"easy"},{"word":"ISSUE","category":"抽象語","hint":"問題、論点","level":"easy"},{"word":"METHOD","category":"学術","hint":"方法、手法","level":"easy"},{"word":"THEORY","category":"学術","hint":"理論、学説","level":"easy"},{"word":"FACTOR","category":"学術","hint":"要因、要素","level":"easy"},{"word":"FUNCTION","category":"学術","hint":"機能、役割","level":"easy"},{"word":"ECONOMY","category":"社会","hint":"経済、経済活動全体","level":"easy"},{"word":"CULTURE","category":"社会","hint":"文化、生活様式や価値観の総体","level":"easy"},{"word":"POLICY","category":"社会","hint":"政策、方針","level":"easy"},{"word":"POVERTY","category":"社会","hint":"貧困","level":"easy"},{"word":"WELFARE","category":"社会","hint":"福祉、幸福","level":"easy"},{"word":"SPECIES","category":"科学","hint":"種。生物分類の基本単位","level":"easy"},{"word":"GENETIC","category":"科学","hint":"遺伝の、遺伝子の","level":"easy"},{"word":"CLIMATE","category":"科学","hint":"気候","level":"easy"},{"word":"ENERGY","category":"科学","hint":"エネルギー","level":"easy"},{"word":"CELLULAR","category":"科学","hint":"細胞の、細胞から成る","level":"easy"},{"word":"ACKNOWLEDGE","category":"動詞","hint":"認める、存在や事実を認識する","level":"normal"},{"word":"ANTICIPATE","category":"動詞","hint":"予想する、期待して待つ","level":"normal"},{"word":"COMPEL","category":"動詞","hint":"強いる、無理に〜させる","level":"normal"},{"word":"CONCEIVE","category":"動詞","hint":"考えつく、想像する","level":"normal"},{"word":"CONSTITUTE","category":"動詞","hint":"構成する、〜に相当する","level":"normal"},{"word":"DEPRIVE","category":"動詞","hint":"奪う。deprive A of B の形で頻出","level":"normal"},{"word":"DISTINGUISH","category":"動詞","hint":"区別する、見分ける","level":"normal"},{"word":"EMPHASIZE","category":"動詞","hint":"強調する","level":"normal"},{"word":"ENCOUNTER","category":"動詞","hint":"遭遇する、直面する","level":"normal"},{"word":"IMPLEMENT","category":"動詞","hint":"実行する、実施する","level":"normal"},{"word":"IMPLY","category":"動詞","hint":"暗に意味する","level":"normal"},{"word":"INHIBIT","category":"動詞","hint":"抑制する、妨げる","level":"normal"},{"word":"PERCEIVE","category":"動詞","hint":"知覚する、認識する","level":"normal"},{"word":"PRESERVE","category":"動詞","hint":"保存する、保護する","level":"normal"},{"word":"RESOLVE","category":"動詞","hint":"解決する、決意する","level":"normal"},{"word":"SUSTAIN","category":"動詞","hint":"維持する、支える","level":"normal"},{"word":"AMBIGUOUS","category":"形容詞","hint":"曖昧な、二通り以上に解釈できる","level":"normal"},{"word":"ARBITRARY","category":"形容詞","hint":"恣意的な、勝手な","level":"normal"},{"word":"COHERENT","category":"形容詞","hint":"一貫した、筋の通った","level":"normal"},{"word":"CONVENTIONAL","category":"形容詞","hint":"従来の、慣習的な","level":"normal"},{"word":"CRUCIAL","category":"形容詞","hint":"極めて重要な","level":"normal"},{"word":"INEVITABLE","category":"形容詞","hint":"避けられない、必然的な","level":"normal"},{"word":"LEGITIMATE","category":"形容詞","hint":"正当な、合法の","level":"normal"},{"word":"PLAUSIBLE","category":"形容詞","hint":"もっともらしい","level":"normal"},{"word":"PRECISE","category":"形容詞","hint":"正確な、精密な","level":"normal"},{"word":"SUBSTANTIAL","category":"形容詞","hint":"かなりの、実質的な","level":"normal"},{"word":"ASSUMPTION","category":"抽象語","hint":"仮定、思い込み","level":"normal"},{"word":"CONSEQUENCE","category":"抽象語","hint":"結果、重大な帰結","level":"normal"},{"word":"CONTROVERSY","category":"抽象語","hint":"論争、議論","level":"normal"},{"word":"PERSPECTIVE","category":"抽象語","hint":"観点、見方","level":"normal"},{"word":"PRIORITY","category":"抽象語","hint":"優先事項、優先順位","level":"normal"},{"word":"TENDENCY","category":"抽象語","hint":"傾向","level":"normal"},{"word":"CONSTRAINT","category":"抽象語","hint":"制約、制限","level":"normal"},{"word":"INCENTIVE","category":"抽象語","hint":"動機、奨励策","level":"normal"},{"word":"HYPOTHESIS","category":"学術","hint":"仮説","level":"normal"},{"word":"VARIABLE","category":"学術","hint":"変数、変わり得る要因","level":"normal"},{"word":"STATISTICS","category":"学術","hint":"統計、統計学","level":"normal"},{"word":"ANALYSIS","category":"学術","hint":"分析","level":"normal"},{"word":"INTERPRETATION","category":"学術","hint":"解釈","level":"normal"},{"word":"CORRELATION","category":"学術","hint":"相関関係","level":"normal"},{"word":"DISTRIBUTION","category":"学術","hint":"分布、配布","level":"normal"},{"word":"MECHANISM","category":"学術","hint":"仕組み、機構","level":"normal"},{"word":"INEQUALITY","category":"社会","hint":"不平等、格差","level":"normal"},{"word":"IMMIGRATION","category":"社会","hint":"移民、移住","level":"normal"},{"word":"DEMOCRACY","category":"社会","hint":"民主主義","level":"normal"},{"word":"LEGISLATION","category":"社会","hint":"法律、立法","level":"normal"},{"word":"GLOBALIZATION","category":"社会","hint":"グローバル化","level":"normal"},{"word":"BIODIVERSITY","category":"科学","hint":"生物多様性","level":"normal"},{"word":"EVOLUTION","category":"科学","hint":"進化","level":"normal"},{"word":"ECOSYSTEM","category":"科学","hint":"生態系","level":"normal"},{"word":"NEUROLOGY","category":"科学","hint":"神経学","level":"normal"},{"word":"PHENOMENON","category":"科学","hint":"現象。複数形 phenomena も頻出","level":"normal"},{"word":"ALLEVIATE","category":"動詞","hint":"軽減する。苦痛・問題・負担などを和らげる","level":"hard"},{"word":"ARTICULATE","category":"動詞","hint":"明確に述べる、はっきり表現する","level":"hard"},{"word":"CONTEMPLATE","category":"動詞","hint":"熟考する、じっくり考える","level":"hard"},{"word":"DETERIORATE","category":"動詞","hint":"悪化する、劣化する","level":"hard"},{"word":"DISSEMINATE","category":"動詞","hint":"広める、普及させる","level":"hard"},{"word":"ELICIT","category":"動詞","hint":"引き出す。反応・情報などを誘い出す","level":"hard"},{"word":"ERADICATE","category":"動詞","hint":"根絶する、完全に取り除く","level":"hard"},{"word":"EXACERBATE","category":"動詞","hint":"悪化させる","level":"hard"},{"word":"FACILITATE","category":"動詞","hint":"促進する、容易にする","level":"hard"},{"word":"RECONCILE","category":"動詞","hint":"調和させる、和解させる","level":"hard"},{"word":"SCRUTINIZE","category":"動詞","hint":"詳しく調べる、精査する","level":"hard"},{"word":"UNDERMINE","category":"動詞","hint":"徐々に弱める、損なう","level":"hard"},{"word":"INTRINSIC","category":"形容詞","hint":"本質的な、内在する","level":"hard"},{"word":"METICULOUS","category":"形容詞","hint":"細心の注意を払う、几帳面な","level":"hard"},{"word":"OBSOLETE","category":"形容詞","hint":"時代遅れの、廃れた","level":"hard"},{"word":"PERVASIVE","category":"形容詞","hint":"広範囲に浸透している","level":"hard"},{"word":"PROFOUND","category":"形容詞","hint":"深い、重大な","level":"hard"},{"word":"REDUNDANT","category":"形容詞","hint":"余分な、不必要な","level":"hard"},{"word":"RIGOROUS","category":"形容詞","hint":"厳密な、厳格な","level":"hard"},{"word":"TENTATIVE","category":"形容詞","hint":"仮の、暫定的な、ためらいがちな","level":"hard"},{"word":"VULNERABLE","category":"形容詞","hint":"傷つきやすい、弱い立場にある","level":"hard"},{"word":"EMPIRICAL","category":"形容詞","hint":"経験的な、観察や実験に基づく","level":"hard"},{"word":"PARADOX","category":"抽象語","hint":"逆説。一見矛盾するが真理を含む表現や状況","level":"hard"},{"word":"DILEMMA","category":"抽象語","hint":"板挟み、二者択一の難題","level":"hard"},{"word":"PREJUDICE","category":"抽象語","hint":"偏見、先入観","level":"hard"},{"word":"CONSENSUS","category":"抽象語","hint":"合意、意見の一致","level":"hard"},{"word":"DISCREPANCY","category":"抽象語","hint":"食い違い、不一致","level":"hard"},{"word":"RESILIENCE","category":"抽象語","hint":"回復力、立ち直る力","level":"hard"},{"word":"ACCOUNTABILITY","category":"抽象語","hint":"説明責任","level":"hard"},{"word":"SUSTAINABILITY","category":"抽象語","hint":"持続可能性","level":"hard"},{"word":"METHODOLOGY","category":"学術","hint":"方法論、研究手法の体系","level":"hard"},{"word":"VALIDITY","category":"学術","hint":"妥当性、有効性","level":"hard"},{"word":"INFERENCE","category":"学術","hint":"推論、推測","level":"hard"},{"word":"PARADIGM","category":"学術","hint":"思考の枠組み、模範となる体系","level":"hard"},{"word":"CAUSALITY","category":"学術","hint":"因果関係","level":"hard"},{"word":"GENERALIZATION","category":"学術","hint":"一般化、概括","level":"hard"},{"word":"REPLICATION","category":"学術","hint":"追試、再現","level":"hard"},{"word":"SYNTHESIS","category":"学術","hint":"統合、総合","level":"hard"},{"word":"BUREAUCRACY","category":"社会","hint":"官僚制度、官僚主義","level":"hard"},{"word":"SOVEREIGNTY","category":"社会","hint":"主権、統治権","level":"hard"},{"word":"IDEOLOGY","category":"社会","hint":"思想体系、イデオロギー","level":"hard"},{"word":"DEMOGRAPHIC","category":"社会","hint":"人口統計上の、人口層の","level":"hard"},{"word":"URBANIZATION","category":"社会","hint":"都市化","level":"hard"},{"word":"NEUROPLASTICITY","category":"科学","hint":"神経可塑性。脳や神経系が変化・適応する性質","level":"hard"},{"word":"HOMEOSTASIS","category":"科学","hint":"恒常性。生体が内部環境を一定に保つ働き","level":"hard"},{"word":"PHOTOSYNTHESIS","category":"科学","hint":"光合成","level":"hard"},{"word":"METABOLISM","category":"科学","hint":"代謝","level":"hard"},{"word":"CONSCIOUSNESS","category":"科学","hint":"意識、意識状態","level":"hard"}];
   const API='https://hangman-auth.okazakiat.workers.dev/token';
-  const MAX={easy:8,normal:6,hard:5};
   const $=id=>document.getElementById(id);
   const store=localStorage;
+  const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let client=null, channel=null, myId='', code='', amHost=false, ready=false;
-  let rival=null, game=null, finish=null, pending=false, roundSerial=0;
-  let joinTimer=null, hostResponded=false, sessionId='';
-  const state={};
-  const stamp=()=>Date.now();
-  const randomCode=()=>{const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let a=new Uint8Array(6);crypto.getRandomValues(a);return [...a].map(x=>chars[x%chars.length]).join('');};
+  let rival=null, game=null, pending=false, hostResponded=false;
+  let joinTimer=null, sessionId='', guestRequestId=null, busy=false;
+  const randomCode=()=>{const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const a=new Uint8Array(6);crypto.getRandomValues(a);return [...a].map(v=>chars[v%chars.length]).join('');};
   const name=()=>{const n=$('onlineName').value.trim().slice(0,14)||'プレイヤー';store.setItem('hm_ably_name',n);return n;};
-  const notice=s=>{$('onlineStatus').textContent=s;};
-  const message=s=>{$('message').textContent=s;};
-  const setButtons=()=>{
+  const notice=t=>{$('onlineStatus').textContent=t;};
+  const message=t=>{$('message').textContent=t;};
+  const err=e=>e?.message||String(e);
+  const isOnline=()=>Boolean(code&&ready&&channel);
+  const myNumber=()=>amHost?1:2;
+  const yourTurn=()=>Boolean(game&&!game.finished&&game.turn===myNumber()&&rival&&ready&&!pending);
+  const counts=(word,letter)=>[...word].filter(c=>c===letter).length;
+  const snapshot=()=>game?{
+    round:game.round,index:game.index,level:game.level,
+    turn:game.turn,guessed:[...game.guessed],points:[...game.points],
+    seq:game.seq,finished:game.finished,last:game.last
+  }:null;
+
+  function updateUI(){
+    window.hmOnlineMyTurn=yourTurn();
+    $('meName').textContent=`プレーヤー${myNumber()}：${name()}`;
+    $('rivalName').textContent=`プレーヤー${amHost?2:1}：${rival?.name||'参加待ち'}`;
+    $('mePoints').textContent=game?game.points[myNumber()-1]:0;
+    $('rivalPoints').textContent=game?game.points[amHost?1:0]:0;
+    $('meProgress').textContent=!game?'開始待ち':game.finished?'対戦終了':yourTurn()?'あなたの番です':'相手の番です';
+    $('rivalProgress').textContent=!rival?'未参加':!game?'開始待ち':game.finished?'対戦終了':yourTurn()?'待機中':'入力中';
+    $('meCard').classList.toggle('turn',!!game&&!game.finished&&game.turn===myNumber());
+    $('rivalCard').classList.toggle('turn',!!game&&!game.finished&&game.turn!==(myNumber()));
     $('startBattle').classList.toggle('hide',!amHost||!rival);
-    $('startBattle').disabled=!ready||!rival||(game&&!finish);
+    $('startBattle').disabled=!isOnline()||!rival||(!!game&&!game.finished)||busy;
     $('startBattle').textContent=game?'次の問題を開始':'対戦開始';
-  };
-  const statusLine=(p)=>{
-    if(!p)return '未参加';
-    if(!game)return '参加中・開始待ち';
-    const letters=(p.guesses||[]);
-    const misses=letters.filter(ch=>!game.item.word.includes(ch)).length;
-    const hit=[...game.item.word].filter(ch=>letters.includes(ch)).length;
-    const state=p.failed?'失敗':p.solved?'正解':finish?'終了':'挑戦中';
-    return `${state} / 正解文字 ${hit}/${game.item.word.length} / ミス ${misses}/${MAX[game.level]}`;
-  };
-  const updateProgress=()=>{
-    $('meName').textContent='自分：'+name()+(amHost?'（親）':'');
-    $('rivalName').textContent='相手：'+(rival?.name||'参加待ち');
-    $('meProgress').textContent=statusLine(state[myId]||{guesses:[]});
-    $('rivalProgress').textContent=statusLine(rival?(state[rival.id]||{guesses:[]}):null);
-    setButtons();
-  };
-  function display(){
-    if(!game){updateProgress();return;}
-    const guesses=state[myId]?.guesses||[];
-    window.hmOnlineRender(game.item,guesses,game.level,!!finish);
-    updateProgress();
-    if(finish){
-      const winner=finish.winner;
-      const heading=winner===null?'DRAW!':winner===myId?'YOU WIN!':'YOU LOSE';
-      $('resultTitle').textContent=heading;
-      $('resultText').textContent=winner===null?'両者とも失敗しました。':winner===myId?'先に正解しました。':'相手が先に正解しました。';
+    $('turnBanner').textContent=!game?'プレーヤー1が問題を開始します':game.finished?'対戦終了・得点を比較しました':yourTurn()?'あなたの番です：1文字選択してください':`プレーヤー${game.turn}の番です`;
+    if(!game)return;
+    window.hmOnlineRender(game.item,game.guessed,game.level,game.finished);
+    // 入力を受け付ける側だけ未使用キーを有効にする
+    document.querySelectorAll('.key').forEach(b=>{b.disabled=game.guessed.includes(b.dataset.letter)||!yourTurn();});
+    const last=game.last;
+    if(last){
+      message(`プレーヤー${last.player}${last.hit?'正解':'不正解'}${last.hit?`！「${last.letter}」で${last.hit}点獲得`:`（${last.letter}）`}。${game.finished?'勝敗が決まりました。':`次はプレーヤー${game.turn}の番です。`}`);
+    }else{
+      message('プレーヤー1から始めます。A〜Zから1文字選んでください。');
+    }
+    if(game.finished){
+      const a=game.points[0], b=game.points[1];
+      const winner=a===b?0:a>b?1:2;
+      $('resultTitle').textContent=winner===0?'DRAW!':winner===myNumber()?'YOU WIN!':'YOU LOSE';
+      $('resultText').textContent=`プレーヤー1：${a}点 ／ プレーヤー2：${b}点。${winner===0?'引き分けです。':`プレーヤー${winner}の勝利です！`}`;
       $('resultAnswer').textContent='ANSWER: '+game.item.word;
-      $('againBtn').textContent=amHost?'次の問題（下の対戦開始ボタン）':'ホストの次の問題を待つ';
+      $('againBtn').textContent=amHost?'次の問題へ':'ホストの開始を待つ';
       $('overlay').classList.add('show');
-      message(heading);
     }else{
       $('overlay').classList.remove('show');
     }
   }
-  function resetGame(){
-    Object.keys(state).forEach(k=>delete state[k]);
-    finish=null;pending=false;
-    $('overlay').classList.remove('show');
-    display();
-  }
-  function parseError(e){return e?.message||String(e);}
+
   async function connect(){
-    if(client){await client.connection.once('connected');return;}
-    if(!window.Ably?.Realtime)throw Error('Ablyライブラリを読み込めません。通信環境をご確認ください。');
-    // authUrlで期限切れ時も自動的にトークンを更新する
+    if(client){
+      if(client.connection.state==='connected')return;
+      await client.connection.once('connected');return;
+    }
+    if(!window.Ably?.Realtime)throw Error('Ablyライブラリを読み込めません。');
     client=new Ably.Realtime({authUrl:API,autoConnect:true});
     await new Promise((resolve,reject)=>{
       if(client.connection.state==='connected')return resolve();
-      const success=()=>{cleanup();resolve();};
-      const error=change=>{cleanup();reject(Error(change.reason?.message||'Ably接続失敗'));};
-      const cleanup=()=>{client.connection.off('connected',success);client.connection.off('failed',error);};
-      client.connection.on('connected',success);
-      client.connection.on('failed',error);
+      const ok=()=>{clean();resolve();};
+      const fail=s=>{clean();reject(Error(s.reason?.message||'Ably接続失敗'));};
+      const clean=()=>{client.connection.off('connected',ok);client.connection.off('failed',fail);};
+      client.connection.on('connected',ok);client.connection.on('failed',fail);
     });
     myId=client.auth.clientId;
     if(!myId)throw Error('認証IDを取得できません。');
     client.connection.on(change=>{
-      if(change.current==='disconnected'||change.current==='suspended')notice('通信が切断されました。自動再接続を試みています。');
-      if(change.current==='connected'&&code)notice('接続中：部屋 '+code);
+      if(['disconnected','suspended','failed'].includes(change.current))notice('通信が切断されています。再接続を確認してください。');
+      if(change.current==='connected'&&code){notice('通信が回復しました。同期中です。');if(!amHost)send('sync-request').catch(()=>{});}
     });
   }
   async function send(type,data={}){
-    if(!channel)return;
-    await channel.publish(type,{...data,session:sessionId,sender:myId,time:stamp()});
+    if(!channel)throw Error('部屋に接続されていません。');
+    await channel.publish(type,{...data,sender:myId,session:sessionId});
   }
   function safeRoom(id){return /^[A-Z2-9]{6}$/.test(id);}
   async function enter(id,host){
+    if(channel)throw Error('既に部屋に参加しています。');
     await connect();
-    code=id;amHost=host;ready=false;rival=null;game=null;finish=null;pending=false;roundSerial=0;
+    code=id;amHost=host;ready=false;rival=null;game=null;pending=false;hostResponded=false;guestRequestId=null;busy=false;
     sessionId=crypto.randomUUID();
-    window.hmOnlineActive=true;
+    window.hmOnlineActive=true;window.hmOnlineMyTurn=false;
     $('lobby').classList.add('hide');$('roomView').classList.remove('hide');
-    $('roomCode').textContent=id;$('difficulty').disabled=true;$('categorySelect').disabled=true;
+    $('roomCode').textContent=id;
+    $('difficulty').disabled=true;$('categorySelect').disabled=true;
     $('newGameBtn').disabled=true;$('overlay').classList.remove('show');
-    // チャンネルへの参加後、プレゼンスで在線者を確認する
     channel=client.channels.get('hangman:'+id);
     channel.subscribe(handle);
     channel.presence.subscribe(onPresence);
@@ -1182,13 +1189,13 @@
     await channel.presence.enter({name:name(),role:host?'host':'guest',session:sessionId});
     ready=true;
     await onPresence();
-    if(host){notice('部屋を作成しました。相手に部屋番号を伝えてください。');}
+    if(host)notice('部屋を作成しました。プレーヤー2をお待ちください。');
     else{
-      notice('ホストに参加を通知しています。');
+      notice('プレーヤー1に参加を通知しています。');
       await send('hello',{name:name()});
-      joinTimer=setTimeout(()=>{if(!hostResponded&&code===id)notice('ホストから返事がありません。部屋番号とホストの接続状態をご確認ください。');},9000);
+      joinTimer=setTimeout(()=>{if(!hostResponded&&code===id)notice('プレーヤー1から応答がありません。部屋番号をご確認ください。');},9000);
     }
-    updateProgress();
+    updateUI();
   }
   async function onPresence(){
     if(!channel)return;
@@ -1198,33 +1205,52 @@
       const others=players.filter(m=>m.clientId!==myId);
       if(amHost){
         const guest=others.find(m=>m.data.role==='guest');
-        if(guest){rival={id:guest.clientId,name:guest.data.name||'プレイヤー'};}
-        else{rival=null;if(game&&!finish)notice('相手の接続が切れました。再接続を待っています。');}
+        if(guest)rival={id:guest.clientId,name:guest.data.name||'プレーヤー2'};
+        else{rival=null;if(game&&!game.finished)notice('プレーヤー2の再接続を待っています。');}
       }else{
         const host=others.find(m=>m.data.role==='host');
-        if(host)rival={id:host.clientId,name:host.data.name||'ホスト'};
+        if(host)rival={id:host.clientId,name:host.data.name||'プレーヤー1'};
       }
-      if(others.filter(m=>m.data.role==='guest').length>1||players.filter(m=>m.data.role==='host').length>1){
-        notice('この部屋に3台以上接続されています。2人だけで利用してください。');
+      if(players.filter(m=>m.data.role==='host').length!==1||players.filter(m=>m.data.role==='guest').length>1){
+        if(players.length>2)notice('この部屋には2人だけ接続してください。');
       }
-      updateProgress();
-    }catch(e){notice('参加者確認に失敗：'+parseError(e));}
+      updateUI();
+    }catch(e){notice('参加状況を確認できません：'+err(e));}
   }
-  function applyProgress(m){
-    if(!game||m.round!==game.round)return;
-    const sender=m.sender;
-    if(sender!==myId && sender!==rival?.id)return;
-    const guesses=Array.isArray(m.guesses)?m.guesses.filter(c=>/^[A-Z]$/.test(c)).slice(0,26):[];
-    const old=state[sender]?.guesses||[];
-    if(guesses.length<old.length)return;
-    // 進捗は単調に増加する
-    const seen=[...new Set([...old,...guesses])];
-    const misses=seen.filter(c=>!game.item.word.includes(c)).length;
-    const solved=[...game.item.word].every(c=>seen.includes(c));
-    state[sender]={guesses:seen,failed:misses>=MAX[game.level],solved};
-    display();
-    if(amHost&&!finish&&rival&&state[myId]?.failed&&state[rival.id]?.failed){
-      send('finish',{round:game.round,winner:null}).catch(e=>notice(parseError(e)));
+
+  function adopt(state){
+    if(!state||!Number.isInteger(state.index)||state.index<0||state.index>=BANK.length||!['easy','normal','hard'].includes(state.level)||typeof state.round!=='string')return;
+    if(game&&game.round===state.round&&state.seq<=game.seq)return;
+    const guessed=Array.isArray(state.guessed)?[...new Set(state.guessed.filter(c=>typeof c==='string'&&letters.includes(c)))]:[];
+    const points=Array.isArray(state.points)&&state.points.length===2?state.points.map(n=>Math.max(0,Math.floor(Number(n)||0))):[0,0];
+    game={round:state.round,index:state.index,item:BANK[state.index],level:state.level,turn:state.turn===2?2:1,guessed,points,seq:Number.isInteger(state.seq)?state.seq:0,finished:Boolean(state.finished),last:state.last||null};
+    pending=false;
+    updateUI();
+    if(!game.finished)notice('対戦中：順番に1文字ずつ入力してください。');
+  }
+  async function publishState(){await send('state',{snapshot:snapshot()});}
+  // 一手を処理するのはホストのみ。重複文字や順番違いを拒否する
+  async function applyGuess(player,ch){
+    if(!amHost||!game||game.finished||!rival||busy||game.turn!==player||!letters.includes(ch)||game.guessed.includes(ch))return false;
+    busy=true;
+    const previous=snapshot();
+    game.guessed.push(ch);
+    const hit=counts(game.item.word,ch);
+    game.points[player-1]+=hit;
+    game.last={player,letter:ch,hit};
+    game.turn=player===1?2:1;
+    game.seq++;
+    game.finished=[...game.item.word].every(c=>game.guessed.includes(c));
+    updateUI();
+    try{
+      await publishState();
+      busy=false;updateUI();
+      return true;
+    }catch(e){
+      // 送信が失敗した場合は確定したことにせず元に戻す
+      game={...previous,item:BANK[previous.index],guessed:[...previous.guessed],points:[...previous.points]};
+      busy=false;updateUI();notice('通信エラー：'+err(e));
+      return false;
     }
   }
   function handle(msg){
@@ -1232,110 +1258,101 @@
     if(!m||!m.sender||m.sender===myId)return;
     if(msg.name==='hello'&&amHost){
       if(rival&&rival.id!==m.sender)return;
-      rival={id:m.sender,name:String(m.name||'プレイヤー').slice(0,14)};
-      send('welcome',{name:name(),guestId:m.sender,snapshot:game?{round:game.round,index:game.index,level:game.level,guesses:state[myId]?.guesses||[],finished:finish}:null}).catch(e=>notice(parseError(e)));
-      updateProgress();
-      return;
+      rival={id:m.sender,name:String(m.name||'プレーヤー2').slice(0,14)};
+      send('welcome',{guestId:m.sender,name:name(),snapshot:snapshot()}).catch(e=>notice(err(e)));
+      updateUI();return;
     }
     if(msg.name==='welcome'&&!amHost&&m.guestId===myId){
       hostResponded=true;clearTimeout(joinTimer);
-      rival={id:m.sender,name:String(m.name||'ホスト').slice(0,14)};
-      notice('ホストに接続できました。対戦開始をお待ちください。');
-      if(m.snapshot&&!game)startFrom(m.snapshot);
-      updateProgress();
-      return;
+      rival={id:m.sender,name:String(m.name||'プレーヤー1').slice(0,14)};
+      if(m.snapshot)adopt(m.snapshot);
+      notice('プレーヤー1に接続しました。');updateUI();return;
     }
-    if(msg.name==='start'&&!amHost){
-      if(rival&&m.sender!==rival.id)return;
-      if(!rival)rival={id:m.sender,name:'ホスト'};
+    if(msg.name==='sync-request'&&amHost){
+      if(!rival||m.sender!==rival.id)return;
+      send('welcome',{guestId:m.sender,name:name(),snapshot:snapshot()}).catch(()=>{});return;
+    }
+    if(msg.name==='state'&&!amHost){
+      if(rival&&rival.id!==m.sender)return;
+      if(!rival)rival={id:m.sender,name:'プレーヤー1'};
       hostResponded=true;clearTimeout(joinTimer);
-      startFrom(m);return;
+      adopt(m.snapshot);return;
     }
-    if(msg.name==='progress'){applyProgress(m);return;}
-    if(msg.name==='finish'){
-      if(!game||m.round!==game.round||finish)return;
-      // 最初に届いた勝利メッセージを採用する
-      if(m.winner!==null&&m.winner!==myId&&m.winner!==rival?.id)return;
-      finish={winner:m.winner};display();return;
+    if(msg.name==='guess'&&amHost){
+      if(!rival||m.sender!==rival.id)return;
+      if(!game||game.finished||m.round!==game.round||m.seq!==game.seq)return;
+      applyGuess(2,m.letter).catch(e=>notice(err(e)));return;
     }
-    if(msg.name==='leave'){
-      if(rival?.id===m.sender){rival=null;updateProgress();notice('相手が退出しました。');}
-    }
-  }
-  function startFrom(m){
-    if(!Number.isInteger(m.index)||m.index<0||m.index>=BANK.length||!MAX[m.level])return;
-    if(game&&game.round===m.round)return;
-    game={round:String(m.round),index:m.index,item:BANK[m.index],level:m.level};
-    resetGame();
-    if(Array.isArray(m.guesses)&&rival)applyProgress({sender:rival.id,round:game.round,guesses:m.guesses});
-    if(m.finished){finish=m.finished;display();}
-    notice('対戦中：同じ英単語を推測してください。');
-    message('A〜Zから文字を選んでください。');
+    if(msg.name==='leave'&&rival?.id===m.sender){rival=null;pending=false;updateUI();notice('相手が退出しました。');}
   }
   async function nextRound(){
-    if(!amHost||!rival||!ready||(game&&!finish))return;
+    if(!amHost||!rival||!isOnline()||(game&&!game.finished)||busy)return;
     const level=$('difficulty').value,category=$('categorySelect').value;
     let pool=BANK.map((item,index)=>({item,index})).filter(o=>o.item.level===level&&(category==='all'||o.item.category===category));
     if(!pool.length)pool=BANK.map((item,index)=>({item,index})).filter(o=>category==='all'||o.item.category===category);
     if(!pool.length){notice('問題がありません。');return;}
     const index=pool[Math.floor(Math.random()*pool.length)].index;
-    const round=crypto.randomUUID();
-    startFrom({round,index,level});
-    try{await send('start',{round,index,level});}catch(e){notice('開始通知エラー：'+parseError(e));}
+    const previous=game;
+    game={round:crypto.randomUUID(),index,item:BANK[index],level,turn:1,guessed:[],points:[0,0],seq:0,finished:false,last:null};
+    updateUI();
+    busy=true;
+    try{await publishState();notice('新しい問題が始まりました。プレーヤー1の番です。');}
+    catch(e){game=previous;updateUI();notice('開始通知エラー：'+err(e));}
+    finally{busy=false;updateUI();}
   }
   async function onlineGuess(ch){
-    if(!ready||!game||finish||pending||!/^[A-Z]$/.test(ch))return;
-    const current=state[myId]?.guesses||[];
-    if(current.includes(ch)||state[myId]?.failed||state[myId]?.solved)return;
-    const guesses=[...current,ch];
-    const miss=guesses.filter(c=>!game.item.word.includes(c)).length;
-    const solved=[...game.item.word].every(c=>guesses.includes(c));
-    state[myId]={guesses,failed:miss>=MAX[game.level],solved};
-    display();
+    if(!isOnline()||!yourTurn()||busy||!letters.includes(ch))return;
+    if(game.guessed.includes(ch))return;
+    if(amHost){await applyGuess(1,ch);return;}
+    if(pending)return;
+    pending=true;updateUI();
     try{
-      await send('progress',{round:game.round,guesses});
-      if(solved){
-        pending=true;notice('正解です！ 勝敗を確定しています。');
-        await send('finish',{round:game.round,winner:myId});
-        // 送信者にはイベントが戻らないため、自分の勝利を反映
-        if(!finish)finish={winner:myId};
-        display();pending=false;
-      }else if(miss>=MAX[game.level]){
-        notice('失敗です。相手の結果を待ちます。');
-      }
-    }catch(e){pending=false;notice('送信エラー：'+parseError(e));}
+      await send('guess',{round:game.round,seq:game.seq,letter:ch});
+      notice('入力を送信しました。プレーヤー1の判定を待っています。');
+      // 受信が途絶えた場合は再同期要求で回復する
+      const requestedRound=game.round,requestedSeq=game.seq;
+      setTimeout(()=>{
+        if(pending&&game&&game.round===requestedRound&&game.seq===requestedSeq){
+          pending=false;updateUI();send('sync-request').catch(()=>{});
+          notice('応答がありません。同期を再試行しました。');
+        }
+      },7500);
+    }catch(e){pending=false;updateUI();notice('送信エラー：'+err(e));}
   }
   window.hmOnlineGuess=onlineGuess;
   async function leave(){
     clearTimeout(joinTimer);
     try{if(channel){await send('leave');await channel.presence.leave();channel.unsubscribe();channel.presence.unsubscribe();await channel.detach();}}catch(e){}
-    channel=null;code='';ready=false;game=null;rival=null;finish=null;pending=false;hostResponded=false;
-    window.hmOnlineActive=false;
+    channel=null;code='';ready=false;rival=null;game=null;pending=false;hostResponded=false;busy=false;
+    window.hmOnlineActive=false;window.hmOnlineMyTurn=false;
     $('lobby').classList.remove('hide');$('roomView').classList.add('hide');
     $('newGameBtn').disabled=false;$('difficulty').disabled=false;$('categorySelect').disabled=false;
-    $('overlay').classList.remove('show');notice('退出しました。部屋を作成するか参加してください。');
+    $('overlay').classList.remove('show');notice('退出しました。');
+    $('turnBanner').textContent='交互に1文字ずつ入力して得点を競います';
   }
   $('onlineName').value=store.getItem('hm_ably_name')||'プレイヤー';
   const invited=new URLSearchParams(location.search).get('room');
   if(invited&&safeRoom(invited.toUpperCase()))$('joinCode').value=invited.toUpperCase();
   $('makeRoom').addEventListener('click',async()=>{
-    try{const id=randomCode();await enter(id,true);}catch(e){notice('部屋作成エラー：'+parseError(e));await leave();}
+    try{await enter(randomCode(),true);}catch(e){notice('部屋作成エラー：'+err(e));await leave();}
   });
   $('joinRoom').addEventListener('click',async()=>{
     const id=$('joinCode').value.trim().toUpperCase();
     if(!safeRoom(id)){notice('部屋番号を6文字で入力してください。');return;}
-    try{await enter(id,false);}catch(e){notice('参加エラー：'+parseError(e));await leave();}
+    try{await enter(id,false);}catch(e){notice('参加エラー：'+err(e));await leave();}
   });
   $('startBattle').addEventListener('click',nextRound);
   $('leaveBattle').addEventListener('click',leave);
-  $('againBtn').addEventListener('click',()=>{if(window.hmOnlineActive){$('overlay').classList.remove('show');if(amHost&&finish)nextRound();}});
+  $('againBtn').addEventListener('click',()=>{
+    if(!window.hmOnlineActive)return;
+    if(amHost&&game?.finished)nextRound();
+    else $('overlay').classList.remove('show');
+  });
   $('copyCode').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(code);notice('部屋番号をコピーしました。');}catch(e){notice('部屋番号：'+code);}});
   $('shareLink').addEventListener('click',async()=>{
     const url=new URL(location.href);url.searchParams.set('room',code);
     try{if(navigator.share)await navigator.share({title:'HANGMAN 対戦',url:url.href});else{await navigator.clipboard.writeText(url.href);notice('招待リンクをコピーしました。');}}catch(e){notice('招待リンク：'+url.href);}
   });
-  // シングルモードへの影響を防ぐ
-  $('difficulty').addEventListener('change',()=>{if(window.hmOnlineActive){notice('難易度の変更は次の問題から反映されます。');}});
 })();
 </script>
 </body>
