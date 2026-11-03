@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HANGMAN '86 - UNIVERSITY ENTRANCE ENGLISH</title>
+<style>
+  :root{
+    --ink:#182117;
+    --paper:#e7dfbd;
+    --paper-dark:#cfc29a;
+    --green:#1f4a2b;
+    --green-2:#2f6b3e;
+    --red:#8c2f25;
+    --shadow:#111a11;
+    --key:#d8cfaa;
+    --key-dark:#b7aa80;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{
+    margin:0;
+    min-height:100%;
+    background:#101810;
+    color:var(--ink);
+    font-family:"Courier New","MS Gothic",monospace;
+    overscroll-behavior:none;
+  }
+
+  body{
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    padding:max(12px,env(safe-area-inset-top)) 10px max(14px,env(safe-area-inset-bottom));
+  }
+
+  button,select{
+    font:inherit;
+  }
+
+  .machine{
+    width:min(100%,560px);
+    background:#b8ad89;
+    border:5px solid #4e4a3c;
+    border-radius:22px;
+    padding:12px;
+    box-shadow:
+      0 10px 0 #24261f,
+      0 18px 38px rgba(0,0,0,.55),
+      inset 0 2px 0 rgba(255,255,255,.35);
+  }
+
+  .brand{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin:2px 4px 10px;
+    color:#3b392f;
+    font-weight:bold;
+    letter-spacing:.12em;
+  }
+
+  .brand small{
+    font-size:11px;
+    letter-spacing:.04em;
+  }
+
+  .screen{
+    position:relative;
+    overflow:hidden;
+    background:var(--paper);
+    border:9px solid #272d24;
+    border-radius:14px;
+    padding:14px;
+    box-shadow:inset 0 0 30px rgba(30,50,30,.22);
+  }
+
+  .screen::after{
+    content:"";
+    pointer-events:none;
+    position:absolute;
+    inset:0;
+    opacity:.16;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,.06) 0,
+      rgba(0,0,0,.06) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  }
+
+  .topbar{
+    position:relative;
+    z-index:1;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+    margin-bottom:8px;
+    color:var(--green);
+  }
+
+  .logo{
+    font-size:clamp(22px,7vw,34px);
+    font-weight:900;
+    line-height:.95;
+    letter-spacing:.08em;
+    text-shadow:2px 2px 0 #b8b08b;
+  }
+
+  .logo span{
+    display:block;
+    font-size:11px;
+    margin-top:6px;
+    letter-spacing:.16em;
+  }
+
+  .score{
+    text-align:right;
+    font-size:12px;
+    line-height:1.55;
+    white-space:nowrap;
+  }
+
+  .main{
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns:45% 55%;
+    gap:10px;
+    min-height:230px;
+  }
+
+  .gallows{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:2px dashed rgba(31,74,43,.35);
+    background:rgba(255,255,255,.12);
+  }
+
+  canvas{
+    width:100%;
+    height:auto;
+    max-height:230px;
+    image-rendering:pixelated;
+  }
+
+  .info{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:11px;
+  }
+
+  .label{
+    font-size:11px;
+    color:#4d5847;
+    letter-spacing:.08em;
+  }
+
+  .category{
+    font-weight:bold;
+    color:var(--green);
+    font-size:14px;
+  }
+
+  .word{
+    min-height:58px;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px 7px;
+  }
+
+  .slot{
+    width:25px;
+    height:34px;
+    display:inline-flex;
+    align-items:flex-end;
+    justify-content:center;
+    border-bottom:3px solid var(--green);
+    font-size:24px;
+    font-weight:900;
+    color:var(--green);
+    text-transform:uppercase;
+  }
+
+  .slot.revealed{
+    animation:pop .22s ease-out;
+  }
+
+  @keyframes pop{
+    from{transform:scale(.7);opacity:.2}
+    to{transform:scale(1);opacity:1}
+  }
+
+  .hintbox{
+    border-left:4px solid var(--green-2);
+    padding-left:9px;
+    font-size:12px;
+    line-height:1.45;
+    min-height:39px;
+  }
+
+  .miss{
+    color:var(--red);
+    font-size:12px;
+    min-height:18px;
+    font-weight:bold;
+  }
+
+  .message{
+    position:relative;
+    z-index:1;
+    margin-top:10px;
+    min-height:42px;
+    border:2px solid var(--green);
+    padding:9px 10px;
+    background:rgba(255,255,255,.18);
+    color:var(--green);
+    font-size:13px;
+    line-height:1.35;
+  }
+
+  .message.blink{
+    animation:blink .8s steps(2,end) infinite;
+  }
+
+  @keyframes blink{
+    50%{opacity:.45}
+  }
+
+  .keyboard{
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns:repeat(9,1fr);
+    gap:5px;
+    margin-top:11px;
+  }
+
+  .key{
+    min-width:0;
+    height:41px;
+    border:2px solid #4f4a3a;
+    border-radius:6px;
+    background:linear-gradient(#efe6c3,#c8bc91);
+    box-shadow:0 3px 0 #81775b;
+    color:#283226;
+    font-weight:bold;
+    font-size:16px;
+    cursor:pointer;
+    touch-action:manipulation;
+  }
+
+  .key:active:not(:disabled){
+    transform:translateY(2px);
+    box-shadow:0 1px 0 #81775b;
+  }
+
+  .key:disabled{
+    color:#8f896e;
+    background:#c3b995;
+    box-shadow:none;
+    transform:translateY(2px);
+    opacity:.62;
+  }
+
+  .key.hit:disabled{
+    color:#24562f;
+    background:#b9d0ae;
+    opacity:.95;
+  }
+
+  .key.misskey:disabled{
+    color:#7e2d27;
+    background:#d5aea0;
+    opacity:.95;
+  }
+
+  .controls{
+    margin-top:12px;
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+  }
+
+  .panel{
+    background:#9d9271;
+    border:2px solid #595340;
+    border-radius:8px;
+    padding:7px;
+  }
+
+  .panel label{
+    display:block;
+    font-size:10px;
+    margin-bottom:4px;
+    color:#2e2d25;
+    font-weight:bold;
+  }
+
+  select,
+  .ctrl{
+    width:100%;
+    height:38px;
+    border:2px solid #4d493b;
+    border-radius:4px;
+    background:#ddd2ac;
+    color:#24271f;
+    font-weight:bold;
+    cursor:pointer;
+  }
+
+  .ctrl.primary{
+    background:#304e30;
+    color:#f3eccd;
+    border-color:#1c2d1c;
+  }
+
+  .foot{
+    margin:13px 3px 2px;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    font-size:10px;
+    color:#494638;
+  }
+
+  .lamp{
+    display:inline-block;
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:#293329;
+    border:1px solid #151915;
+    margin-right:4px;
+    box-shadow:inset 0 0 2px #000;
+  }
+
+  .lamp.on{
+    background:#8fae5a;
+    box-shadow:0 0 8px #91bc5b;
+  }
+
+  .overlay{
+    display:none;
+    position:absolute;
+    z-index:5;
+    inset:0;
+    align-items:center;
+    justify-content:center;
+    background:rgba(24,33,23,.72);
+    padding:20px;
+  }
+
+  .overlay.show{
+    display:flex;
+  }
+
+  .result{
+    width:min(92%,360px);
+    background:var(--paper);
+    border:5px double var(--green);
+    box-shadow:8px 8px 0 rgba(0,0,0,.35);
+    padding:18px;
+    text-align:center;
+  }
+
+  .result h2{
+    margin:0 0 12px;
+    color:var(--green);
+    font-size:26px;
+  }
+
+  .result p{
+    margin:7px 0;
+    line-height:1.45;
+  }
+
+  .result button{
+    margin-top:12px;
+    width:100%;
+    height:44px;
+    border:2px solid #1d321e;
+    background:#335d36;
+    color:#f1eac9;
+    font-weight:bold;
+  }
+
+  @media (max-width:430px){
+    body{padding-left:6px;padding-right:6px}
+    .machine{padding:8px;border-width:4px;border-radius:17px}
+    .screen{padding:10px;border-width:7px}
+    .main{grid-template-columns:43% 57%;min-height:215px}
+    .slot{width:21px;height:30px;font-size:21px}
+    .keyboard{gap:4px}
+    .key{height:39px;font-size:15px}
+    .controls{grid-template-columns:1fr 1fr}
+    .panel:last-child{grid-column:1 / -1}
+    .logo{font-size:25px}
+  }
+
+  @media (max-width:350px){
+    .main{grid-template-columns:1fr}
+    .gallows{height:165px}
+    canvas{height:160px}
+    .keyboard{grid-template-columns:repeat(7,1fr)}
+  }
+
+  .online{margin-top:12px;background:var(--paper);border:5px solid #272d24;border-radius:13px;padding:12px;color:var(--ink)}
+  .online h2{margin:0 0 9px;color:var(--green);font-size:17px}
+  .online label{display:block;font-size:11px;margin:4px 0}
+  .online input{width:100%;min-height:44px;padding:8px;font:inherit;font-size:16px;background:#fffbea;border:2px solid #80775a;border-radius:5px}
+  .online button{min-height:43px;font:inherit;font-weight:bold;padding:6px 9px;background:var(--green);color:white;border:2px solid #142c18;border-radius:5px}
+  .online button.secondary{background:#dad0aa;color:var(--ink);border-color:#8b7b5a}
+  .online button:disabled{opacity:.45}
+  .og{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .og .wide{grid-column:1/-1}
+  .online .status{background:#f5edcd;padding:8px;border-left:4px solid var(--green);font-size:12px;line-height:1.5;margin-top:9px;overflow-wrap:anywhere}
+  .online .code{font-size:27px;font-weight:900;letter-spacing:.13em;color:var(--green);text-align:center;padding:8px}
+  .online .player{background:#f8f0d1;border:2px solid #afa17e;border-radius:6px;padding:9px;font-size:12px;min-width:0;overflow-wrap:anywhere}
+  .online .player strong{display:block;font-size:14px;margin-bottom:4px}
+  .online .tiny{font-size:11px;line-height:1.5;margin:8px 0 0}
+  .online .hide{display:none!important}
+  @media(max-width:430px){.online{padding:9px;border-width:4px}}
+</style>
+</head>
+<body>
+<div class="machine">
+  <div class="brand">
+    <div>MICRO COMPUTER GAME</div>
+    <small>MODEL HM-86</small>
+  </div>
+
+  <div class="screen">
+    <div class="topbar">
+      <div class="logo">HANGMAN '86<span>UNIVERSITY ENTRANCE ENGLISH</span></div>
+      <div class="score">
+        WIN <span id="wins">0</span><br>
+        STREAK <span id="streak">0</span><br>
+        BEST <span id="best">0</span>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="gallows">
+        <canvas id="hangmanCanvas" width="260" height="280" aria-label="ハングマンの絵"></canvas>
+      </div>
+
+      <div class="info">
+        <div>
+          <div class="label">CATEGORY</div>
+          <div class="category" id="category">---</div>
+        </div>
+
+        <div>
+          <div class="label">SECRET WORD</div>
+          <div class="word" id="word"></div>
+        </div>
+
+        <div class="hintbox">
+          <div class="label">HINT</div>
+          <div id="hint">大学受験英語の語彙問題を開始してください。</div>
+        </div>
+
+        <div class="miss" id="missText">MISS: -</div>
+      </div>
+    </div>
+
+    <div class="message" id="message">レベルを選んで「NEW GAME」を押してください。</div>
+
+    <div class="keyboard" id="keyboard"></div>
+
+    <div class="overlay" id="overlay">
+      <div class="result">
+        <h2 id="resultTitle">YOU WIN!</h2>
+        <p id="resultText"></p>
+        <p id="resultAnswer"></p>
+        <button id="againBtn" type="button">PLAY AGAIN</button>
+      </div>
+    </div>
+  </div>
+
+
+  <section class="online" id="online">
+    <h2>対戦モード / ABLY</h2>
+    <div class="og" id="lobby">
+      <div class="wide"><label for="onlineName">プレイヤー名</label><input id="onlineName" maxlength="14" placeholder="プレイヤー名"></div>
+      <button id="makeRoom" type="button">部屋を作成</button>
+      <button id="joinRoom" type="button">部屋に参加</button>
+      <div class="wide"><label for="joinCode">部屋番号（6文字）</label><input id="joinCode" maxlength="6" placeholder="例：ABC123" autocomplete="off" autocapitalize="characters"></div>
+    </div>
+    <div id="roomView" class="hide">
+      <div class="tiny">相手に伝える部屋番号</div>
+      <div class="code" id="roomCode">------</div>
+      <div class="og">
+        <button class="secondary" type="button" id="copyCode">番号をコピー</button>
+        <button class="secondary" type="button" id="shareLink">招待リンクを共有</button>
+        <div class="player"><strong id="meName">自分</strong><div id="meProgress">待機中</div></div>
+        <div class="player"><strong id="rivalName">相手</strong><div id="rivalProgress">待機中</div></div>
+        <button class="wide hide" id="startBattle" type="button">対戦開始</button>
+        <button class="wide secondary" id="leaveBattle" type="button">退出</button>
+      </div>
+    </div>
+    <div id="onlineStatus" class="status" role="status">対戦にはインターネットが必要です。部屋を作成するか、部屋番号を入力して参加してください。</div>
+    <p class="tiny">ルール：同じ英単語をそれぞれ解き、先に完成した人が勝ちです。両者とも失敗した場合は引き分けです。ホストが問題を選びます。</p>
+  </section>
+  <div class="controls">
+    <div class="panel">
+      <label for="difficulty">ENTRANCE LEVEL</label>
+      <select id="difficulty">
+        <option value="easy">標準</option>
+        <option value="normal" selected>難関</option>
+        <option value="hard">最難関</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <label for="categorySelect">CATEGORY</label>
+      <select id="categorySelect">
+        <option value="all">ALL</option>
+        <option value="抽象語">ABSTRACT</option>
+        <option value="学術">ACADEMIC</option>
+        <option value="社会">SOCIETY</option>
+        <option value="科学">SCIENCE</option>
+        <option value="動詞">VERBS</option>
+        <option value="形容詞">ADJECTIVES</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <label>&nbsp;</label>
+      <button class="ctrl primary" id="newGameBtn" type="button">NEW GAME</button>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><span class="lamp on"></span>READY</div>
+    <div>KEYBOARD A-Z SUPPORTED</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // 単語データ
+  const WORDS = [
+    // 標準レベル：共通テスト〜中堅私大レベル
+    {word:"ACHIEVE", category:"動詞", hint:"達成する。目標や成功を手に入れること", level:"easy"},
+    {word:"ACQUIRE", category:"動詞", hint:"獲得する。知識・技能・財産などを得ること", level:"easy"},
+    {word:"ADAPT", category:"動詞", hint:"適応する。環境や状況に合わせて変化すること", level:"easy"},
+    {word:"ASSUME", category:"動詞", hint:"〜だと思い込む、仮定する", level:"easy"},
+    {word:"CONSUME", category:"動詞", hint:"消費する。時間・エネルギー・資源などを使うこと", level:"easy"},
+    {word:"DECLINE", category:"動詞", hint:"減少する、衰える、断る", level:"easy"},
+    {word:"ESTABLISH", category:"動詞", hint:"設立する、確立する", level:"easy"},
+    {word:"MAINTAIN", category:"動詞", hint:"維持する、主張する", level:"easy"},
+    {word:"OBTAIN", category:"動詞", hint:"得る、入手する", level:"easy"},
+    {word:"REQUIRE", category:"動詞", hint:"必要とする、要求する", level:"easy"},
+
+    {word:"ANCIENT", category:"形容詞", hint:"古代の、とても古い", level:"easy"},
+    {word:"APPARENT", category:"形容詞", hint:"明らかな、見かけ上の", level:"easy"},
+    {word:"ESSENTIAL", category:"形容詞", hint:"不可欠な、本質的な", level:"easy"},
+    {word:"FREQUENT", category:"形容詞", hint:"頻繁な", level:"easy"},
+    {word:"INDIVIDUAL", category:"形容詞", hint:"個々の、個人の", level:"easy"},
+    {word:"POTENTIAL", category:"形容詞", hint:"潜在的な、可能性のある", level:"easy"},
+    {word:"RELEVANT", category:"形容詞", hint:"関連のある、適切な", level:"easy"},
+    {word:"SIGNIFICANT", category:"形容詞", hint:"重要な、かなりの、意味のある", level:"easy"},
+
+    {word:"ATTITUDE", category:"抽象語", hint:"態度、考え方", level:"easy"},
+    {word:"CONCEPT", category:"抽象語", hint:"概念、考え", level:"easy"},
+    {word:"CONTEXT", category:"抽象語", hint:"文脈、状況", level:"easy"},
+    {word:"EVIDENCE", category:"抽象語", hint:"証拠、根拠", level:"easy"},
+    {word:"FEATURE", category:"抽象語", hint:"特徴、特色", level:"easy"},
+    {word:"ISSUE", category:"抽象語", hint:"問題、論点", level:"easy"},
+    {word:"METHOD", category:"学術", hint:"方法、手法", level:"easy"},
+    {word:"THEORY", category:"学術", hint:"理論、学説", level:"easy"},
+    {word:"FACTOR", category:"学術", hint:"要因、要素", level:"easy"},
+    {word:"FUNCTION", category:"学術", hint:"機能、役割", level:"easy"},
+
+    {word:"ECONOMY", category:"社会", hint:"経済、経済活動全体", level:"easy"},
+    {word:"CULTURE", category:"社会", hint:"文化、生活様式や価値観の総体", level:"easy"},
+    {word:"POLICY", category:"社会", hint:"政策、方針", level:"easy"},
+    {word:"POVERTY", category:"社会", hint:"貧困", level:"easy"},
+    {word:"WELFARE", category:"社会", hint:"福祉、幸福", level:"easy"},
+    {word:"SPECIES", category:"科学", hint:"種。生物分類の基本単位", level:"easy"},
+    {word:"GENETIC", category:"科学", hint:"遺伝の、遺伝子の", level:"easy"},
+    {word:"CLIMATE", category:"科学", hint:"気候", level:"easy"},
+    {word:"ENERGY", category:"科学", hint:"エネルギー", level:"easy"},
+    {word:"CELLULAR", category:"科学", hint:"細胞の、細胞から成る", level:"easy"},
+
+    // 難関レベル：MARCH・関関同立〜旧帝大・早慶レベル
+    {word:"ACKNOWLEDGE", category:"動詞", hint:"認める、存在や事実を認識する", level:"normal"},
+    {word:"ANTICIPATE", category:"動詞", hint:"予想する、期待して待つ", level:"normal"},
+    {word:"COMPEL", category:"動詞", hint:"強いる、無理に〜させる", level:"normal"},
+    {word:"CONCEIVE", category:"動詞", hint:"考えつく、想像する", level:"normal"},
+    {word:"CONSTITUTE", category:"動詞", hint:"構成する、〜に相当する", level:"normal"},
+    {word:"DEPRIVE", category:"動詞", hint:"奪う。deprive A of B の形で頻出", level:"normal"},
+    {word:"DISTINGUISH", category:"動詞", hint:"区別する、見分ける", level:"normal"},
+    {word:"EMPHASIZE", category:"動詞", hint:"強調する", level:"normal"},
+    {word:"ENCOUNTER", category:"動詞", hint:"遭遇する、直面する", level:"normal"},
+    {word:"IMPLEMENT", category:"動詞", hint:"実行する、実施する", level:"normal"},
+    {word:"IMPLY", category:"動詞", hint:"暗に意味する", level:"normal"},
+    {word:"INHIBIT", category:"動詞", hint:"抑制する、妨げる", level:"normal"},
+    {word:"PERCEIVE", category:"動詞", hint:"知覚する、認識する", level:"normal"},
+    {word:"PRESERVE", category:"動詞", hint:"保存する、保護する", level:"normal"},
+    {word:"RESOLVE", category:"動詞", hint:"解決する、決意する", level:"normal"},
+    {word:"SUSTAIN", category:"動詞", hint:"維持する、支える", level:"normal"},
+
+    {word:"AMBIGUOUS", category:"形容詞", hint:"曖昧な、二通り以上に解釈できる", level:"normal"},
+    {word:"ARBITRARY", category:"形容詞", hint:"恣意的な、勝手な", level:"normal"},
+    {word:"COHERENT", category:"形容詞", hint:"一貫した、筋の通った", level:"normal"},
+    {word:"CONVENTIONAL", category:"形容詞", hint:"従来の、慣習的な", level:"normal"},
+    {word:"CRUCIAL", category:"形容詞", hint:"極めて重要な", level:"normal"},
+    {word:"INEVITABLE", category:"形容詞", hint:"避けられない、必然的な", level:"normal"},
+    {word:"LEGITIMATE", category:"形容詞", hint:"正当な、合法の", level:"normal"},
+    {word:"PLAUSIBLE", category:"形容詞", hint:"もっともらしい", level:"normal"},
+    {word:"PRECISE", category:"形容詞", hint:"正確な、精密な", level:"normal"},
+    {word:"SUBSTANTIAL", category:"形容詞", hint:"かなりの、実質的な", level:"normal"},
+
+    {word:"ASSUMPTION", category:"抽象語", hint:"仮定、思い込み", level:"normal"},
+    {word:"CONSEQUENCE", category:"抽象語", hint:"結果、重大な帰結", level:"normal"},
+    {word:"CONTROVERSY", category:"抽象語", hint:"論争、議論", level:"normal"},
+    {word:"PERSPECTIVE", category:"抽象語", hint:"観点、見方", level:"normal"},
+    {word:"PRIORITY", category:"抽象語", hint:"優先事項、優先順位", level:"normal"},
+    {word:"TENDENCY", category:"抽象語", hint:"傾向", level:"normal"},
+    {word:"CONSTRAINT", category:"抽象語", hint:"制約、制限", level:"normal"},
+    {word:"INCENTIVE", category:"抽象語", hint:"動機、奨励策", level:"normal"},
+
+    {word:"HYPOTHESIS", category:"学術", hint:"仮説", level:"normal"},
+    {word:"VARIABLE", category:"学術", hint:"変数、変わり得る要因", level:"normal"},
+    {word:"STATISTICS", category:"学術", hint:"統計、統計学", level:"normal"},
+    {word:"ANALYSIS", category:"学術", hint:"分析", level:"normal"},
+    {word:"INTERPRETATION", category:"学術", hint:"解釈", level:"normal"},
+    {word:"CORRELATION", category:"学術", hint:"相関関係", level:"normal"},
+    {word:"DISTRIBUTION", category:"学術", hint:"分布、配布", level:"normal"},
+    {word:"MECHANISM", category:"学術", hint:"仕組み、機構", level:"normal"},
+
+    {word:"INEQUALITY", category:"社会", hint:"不平等、格差", level:"normal"},
+    {word:"IMMIGRATION", category:"社会", hint:"移民、移住", level:"normal"},
+    {word:"DEMOCRACY", category:"社会", hint:"民主主義", level:"normal"},
+    {word:"LEGISLATION", category:"社会", hint:"法律、立法", level:"normal"},
+    {word:"GLOBALIZATION", category:"社会", hint:"グローバル化", level:"normal"},
+    {word:"BIODIVERSITY", category:"科学", hint:"生物多様性", level:"normal"},
+    {word:"EVOLUTION", category:"科学", hint:"進化", level:"normal"},
+    {word:"ECOSYSTEM", category:"科学", hint:"生態系", level:"normal"},
+    {word:"NEUROLOGY", category:"科学", hint:"神経学", level:"normal"},
+    {word:"PHENOMENON", category:"科学", hint:"現象。複数形 phenomena も頻出", level:"normal"},
+
+    // 最難関レベル：最難関国公立・早慶上位・医学部レベル
+    {word:"ALLEVIATE", category:"動詞", hint:"軽減する。苦痛・問題・負担などを和らげる", level:"hard"},
+    {word:"ARTICULATE", category:"動詞", hint:"明確に述べる、はっきり表現する", level:"hard"},
+    {word:"CONTEMPLATE", category:"動詞", hint:"熟考する、じっくり考える", level:"hard"},
+    {word:"DETERIORATE", category:"動詞", hint:"悪化する、劣化する", level:"hard"},
+    {word:"DISSEMINATE", category:"動詞", hint:"広める、普及させる", level:"hard"},
+    {word:"ELICIT", category:"動詞", hint:"引き出す。反応・情報などを誘い出す", level:"hard"},
+    {word:"ERADICATE", category:"動詞", hint:"根絶する、完全に取り除く", level:"hard"},
+    {word:"EXACERBATE", category:"動詞", hint:"悪化させる", level:"hard"},
+    {word:"FACILITATE", category:"動詞", hint:"促進する、容易にする", level:"hard"},
+    {word:"RECONCILE", category:"動詞", hint:"調和させる、和解させる", level:"hard"},
+    {word:"SCRUTINIZE", category:"動詞", hint:"詳しく調べる、精査する", level:"hard"},
+    {word:"UNDERMINE", category:"動詞", hint:"徐々に弱める、損なう", level:"hard"},
+
+    {word:"INTRINSIC", category:"形容詞", hint:"本質的な、内在する", level:"hard"},
+    {word:"METICULOUS", category:"形容詞", hint:"細心の注意を払う、几帳面な", level:"hard"},
+    {word:"OBSOLETE", category:"形容詞", hint:"時代遅れの、廃れた", level:"hard"},
+    {word:"PERVASIVE", category:"形容詞", hint:"広範囲に浸透している", level:"hard"},
+    {word:"PROFOUND", category:"形容詞", hint:"深い、重大な", level:"hard"},
+    {word:"REDUNDANT", category:"形容詞", hint:"余分な、不必要な", level:"hard"},
+    {word:"RIGOROUS", category:"形容詞", hint:"厳密な、厳格な", level:"hard"},
+    {word:"TENTATIVE", category:"形容詞", hint:"仮の、暫定的な、ためらいがちな", level:"hard"},
+    {word:"VULNERABLE", category:"形容詞", hint:"傷つきやすい、弱い立場にある", level:"hard"},
+    {word:"EMPIRICAL", category:"形容詞", hint:"経験的な、観察や実験に基づく", level:"hard"},
+
+    {word:"PARADOX", category:"抽象語", hint:"逆説。一見矛盾するが真理を含む表現や状況", level:"hard"},
+    {word:"DILEMMA", category:"抽象語", hint:"板挟み、二者択一の難題", level:"hard"},
+    {word:"PREJUDICE", category:"抽象語", hint:"偏見、先入観", level:"hard"},
+    {word:"CONSENSUS", category:"抽象語", hint:"合意、意見の一致", level:"hard"},
+    {word:"DISCREPANCY", category:"抽象語", hint:"食い違い、不一致", level:"hard"},
+    {word:"RESILIENCE", category:"抽象語", hint:"回復力、立ち直る力", level:"hard"},
+    {word:"ACCOUNTABILITY", category:"抽象語", hint:"説明責任", level:"hard"},
+    {word:"SUSTAINABILITY", category:"抽象語", hint:"持続可能性", level:"hard"},
+
+    {word:"METHODOLOGY", category:"学術", hint:"方法論、研究手法の体系", level:"hard"},
+    {word:"VALIDITY", category:"学術", hint:"妥当性、有効性", level:"hard"},
+    {word:"INFERENCE", category:"学術", hint:"推論、推測", level:"hard"},
+    {word:"PARADIGM", category:"学術", hint:"思考の枠組み、模範となる体系", level:"hard"},
+    {word:"CAUSALITY", category:"学術", hint:"因果関係", level:"hard"},
+    {word:"GENERALIZATION", category:"学術", hint:"一般化、概括", level:"hard"},
+    {word:"REPLICATION", category:"学術", hint:"追試、再現", level:"hard"},
+    {word:"SYNTHESIS", category:"学術", hint:"統合、総合", level:"hard"},
+
+    {word:"BUREAUCRACY", category:"社会", hint:"官僚制度、官僚主義", level:"hard"},
+    {word:"SOVEREIGNTY", category:"社会", hint:"主権、統治権", level:"hard"},
+    {word:"IDEOLOGY", category:"社会", hint:"思想体系、イデオロギー", level:"hard"},
+    {word:"DEMOGRAPHIC", category:"社会", hint:"人口統計上の、人口層の", level:"hard"},
+    {word:"URBANIZATION", category:"社会", hint:"都市化", level:"hard"},
+    {word:"NEUROPLASTICITY", category:"科学", hint:"神経可塑性。脳や神経系が変化・適応する性質", level:"hard"},
+    {word:"HOMEOSTASIS", category:"科学", hint:"恒常性。生体が内部環境を一定に保つ働き", level:"hard"},
+    {word:"PHOTOSYNTHESIS", category:"科学", hint:"光合成", level:"hard"},
+    {word:"METABOLISM", category:"科学", hint:"代謝", level:"hard"},
+    {word:"CONSCIOUSNESS", category:"科学", hint:"意識、意識状態", level:"hard"}
+  ];
+
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const canvas = document.getElementById("hangmanCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const els = {
+    wins: document.getElementById("wins"),
+    streak: document.getElementById("streak"),
+    best: document.getElementById("best"),
+    category: document.getElementById("category"),
+    word: document.getElementById("word"),
+    hint: document.getElementById("hint"),
+    missText: document.getElementById("missText"),
+    message: document.getElementById("message"),
+    keyboard: document.getElementById("keyboard"),
+    overlay: document.getElementById("overlay"),
+    resultTitle: document.getElementById("resultTitle"),
+    resultText: document.getElementById("resultText"),
+    resultAnswer: document.getElementById("resultAnswer"),
+    againBtn: document.getElementById("againBtn"),
+    difficulty: document.getElementById("difficulty"),
+    categorySelect: document.getElementById("categorySelect"),
+    newGameBtn: document.getElementById("newGameBtn")
+  };
+
+  let current = null;
+  let guessed = new Set();
+  let mistakes = 0;
+  let active = false;
+  let wins = Number(localStorage.getItem("hm86_wins") || 0);
+  let streak = Number(localStorage.getItem("hm86_streak") || 0);
+  let best = Number(localStorage.getItem("hm86_best") || 0);
+
+  // 難易度ごとの許容ミス回数
+  const MAX_MISTAKES = {
+    easy: 8,
+    normal: 6,
+    hard: 5
+  };
+
+  function saveScore(){
+    localStorage.setItem("hm86_wins", wins);
+    localStorage.setItem("hm86_streak", streak);
+    localStorage.setItem("hm86_best", best);
+  }
+
+  function renderScore(){
+    els.wins.textContent = wins;
+    els.streak.textContent = streak;
+    els.best.textContent = best;
+  }
+
+  function buildKeyboard(){
+    els.keyboard.innerHTML = "";
+    alphabet.forEach(letter => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "key";
+      button.dataset.letter = letter;
+      button.textContent = letter;
+      button.setAttribute("aria-label", letter);
+      button.addEventListener("click", () => guess(letter));
+      els.keyboard.appendChild(button);
+    });
+  }
+
+  function chooseWord(){
+    const level = els.difficulty.value;
+    const category = els.categorySelect.value;
+
+    let pool = WORDS.filter(item => item.level === level);
+
+    if(category !== "all"){
+      pool = pool.filter(item => item.category === category);
+    }
+
+    // 選択条件で候補がなければ、カテゴリを優先して難易度条件を外す
+    if(pool.length === 0 && category !== "all"){
+      pool = WORDS.filter(item => item.category === category);
+    }
+
+    // それでも候補がなければ全体から選ぶ
+    if(pool.length === 0){
+      pool = WORDS;
+    }
+
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function newGame(){
+    if(window.hmOnlineActive) return;
+    current = chooseWord();
+    guessed = new Set();
+    mistakes = 0;
+    active = true;
+
+    els.overlay.classList.remove("show");
+    els.category.textContent = current.category;
+    els.hint.textContent = current.hint;
+    els.message.classList.remove("blink");
+    els.message.textContent = "ヒントから英単語を推測し、A〜Zから1文字選んでください。";
+    els.missText.textContent = "MISS: -";
+
+    document.querySelectorAll(".key").forEach(button => {
+      button.disabled = false;
+      button.classList.remove("hit","misskey");
+    });
+
+    renderWord();
+    drawHangman();
+  }
+
+  function renderWord(revealedLetter = ""){
+    els.word.innerHTML = "";
+
+    [...current.word].forEach(ch => {
+      const span = document.createElement("span");
+      span.className = "slot";
+      if(guessed.has(ch)){
+        span.textContent = ch;
+        if(ch === revealedLetter){
+          span.classList.add("revealed");
+        }
+      }else{
+        span.textContent = "";
+      }
+      els.word.appendChild(span);
+    });
+  }
+
+  function guess(letter){
+    if(window.hmOnlineActive){ window.hmOnlineGuess?.(letter); return; }
+    if(!active || !current || guessed.has(letter)){
+      return;
+    }
+
+    guessed.add(letter);
+    const correct = current.word.includes(letter);
+    const key = document.querySelector(`.key[data-letter="${letter}"]`);
+
+    if(key){
+      key.disabled = true;
+      key.classList.add(correct ? "hit" : "misskey");
+    }
+
+    if(correct){
+      renderWord(letter);
+      els.message.textContent = `"${letter}" は含まれています。意味と綴りを結びつけて考えてください。`;
+    }else{
+      mistakes++;
+      const misses = [...guessed].filter(ch => !current.word.includes(ch));
+      els.missText.textContent = "MISS: " + misses.join(" ");
+      els.message.textContent = `"${letter}" は含まれていません。語源や接頭辞・接尾辞も手掛かりです。`;
+      drawHangman();
+    }
+
+    checkEnd();
+  }
+
+  function checkEnd(){
+    const solved = [...current.word].every(ch => guessed.has(ch));
+    const max = MAX_MISTAKES[els.difficulty.value];
+
+    if(solved){
+      active = false;
+      wins++;
+      streak++;
+      best = Math.max(best, streak);
+      saveScore();
+      renderScore();
+
+      els.message.textContent = "正解です！";
+      els.message.classList.add("blink");
+      showResult(true);
+      return;
+    }
+
+    if(mistakes >= max){
+      active = false;
+      streak = 0;
+      saveScore();
+      renderScore();
+
+      // ゲームオーバー時は答えを表示
+      [...current.word].forEach(ch => guessed.add(ch));
+      renderWord();
+      els.message.textContent = "GAME OVER";
+      els.message.classList.add("blink");
+      showResult(false);
+    }
+  }
+
+  function showResult(win){
+    setTimeout(() => {
+      els.resultTitle.textContent = win ? "YOU WIN!" : "GAME OVER";
+      els.resultText.textContent = win
+        ? `ミス ${mistakes} 回で正解しました。`
+        : `許容回数を超えました。`;
+      els.resultAnswer.textContent = "ANSWER: " + current.word;
+      els.overlay.classList.add("show");
+    }, 450);
+  }
+
+  function drawHangman(){
+    const max = MAX_MISTAKES[els.difficulty.value];
+    const progress = max === 0 ? 0 : mistakes / max;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.save();
+
+    // レトロ感のある太い線
+    ctx.strokeStyle = "#1f4a2b";
+    ctx.fillStyle = "#1f4a2b";
+    ctx.lineWidth = 7;
+    ctx.lineCap = "square";
+    ctx.lineJoin = "miter";
+
+    // 絞首台
+    ctx.beginPath();
+    ctx.moveTo(22,255);
+    ctx.lineTo(170,255);
+    ctx.moveTo(58,255);
+    ctx.lineTo(58,25);
+    ctx.lineTo(190,25);
+    ctx.lineTo(190,58);
+    ctx.stroke();
+
+    // 台の補強
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(58,65);
+    ctx.lineTo(98,25);
+    ctx.stroke();
+
+    // 難易度に合わせて6段階へ正規化
+    const stage = Math.ceil(progress * 6);
+
+    // 頭
+    if(stage >= 1){
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(190,86,27,0,Math.PI*2);
+      ctx.stroke();
+    }
+
+    // 胴体
+    if(stage >= 2){
+      ctx.beginPath();
+      ctx.moveTo(190,113);
+      ctx.lineTo(190,183);
+      ctx.stroke();
+    }
+
+    // 左腕
+    if(stage >= 3){
+      ctx.beginPath();
+      ctx.moveTo(190,129);
+      ctx.lineTo(151,156);
+      ctx.stroke();
+    }
+
+    // 右腕
+    if(stage >= 4){
+      ctx.beginPath();
+      ctx.moveTo(190,129);
+      ctx.lineTo(229,156);
+      ctx.stroke();
+    }
+
+    // 左脚
+    if(stage >= 5){
+      ctx.beginPath();
+      ctx.moveTo(190,183);
+      ctx.lineTo(157,228);
+      ctx.stroke();
+    }
+
+    // 右脚
+    if(stage >= 6){
+      ctx.beginPath();
+      ctx.moveTo(190,183);
+      ctx.lineTo(223,228);
+      ctx.stroke();
+
+      // 失敗時の顔
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(178,80);
+      ctx.lineTo(185,87);
+      ctx.moveTo(185,80);
+      ctx.lineTo(178,87);
+      ctx.moveTo(195,80);
+      ctx.lineTo(202,87);
+      ctx.moveTo(202,80);
+      ctx.lineTo(195,87);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(190,102,10,Math.PI*1.15,Math.PI*1.85);
+      ctx.stroke();
+    }
+
+    // 画面左下の残機風表示
+    const remaining = Math.max(0, max - mistakes);
+    ctx.font = "bold 14px Courier New";
+    ctx.fillText(`CHANCE ${remaining}`, 70, 274);
+
+    ctx.restore();
+  }
+
+  // オンライン状態を既存のハングマン画面に描画する
+  window.hmOnlineRender = (item, letters, level, finished = false) => {
+    current = item;
+    guessed = new Set(letters || []);
+    mistakes = [...guessed].filter(c => !item.word.includes(c)).length;
+    active = false;
+    els.difficulty.value = level;
+    els.category.textContent = item.category;
+    els.hint.textContent = item.hint;
+    const misses = [...guessed].filter(c => !item.word.includes(c));
+    els.missText.textContent = 'MISS: ' + (misses.join(' ') || '-');
+    if(finished){ for(const c of item.word) guessed.add(c); }
+    renderWord();
+    drawHangman();
+    document.querySelectorAll('.key').forEach(b => {
+      const c=b.dataset.letter;
+      b.disabled = guessed.has(c) || finished;
+      b.classList.toggle('hit', guessed.has(c) && item.word.includes(c));
+      b.classList.toggle('misskey', guessed.has(c) && !item.word.includes(c));
+    });
+  };
+
+  // PCキーボード対応
+  document.addEventListener("keydown", event => {
+    if(event.repeat){
+      return;
+    }
+
+    const key = event.key.toUpperCase();
+
+    if(/^[A-Z]$/.test(key)){
+      guess(key);
+    }else if(event.key === "Enter"){
+      if(els.overlay.classList.contains("show")){
+        newGame();
+      }
+    }
+  });
+
+  els.newGameBtn.addEventListener("click", newGame);
+  els.againBtn.addEventListener("click", newGame);
+
+  els.difficulty.addEventListener("change", () => {
+    if(active){
+      // 難易度変更中に進行状態が矛盾しないよう、新しいゲームを開始する
+      newGame();
+    }else{
+      drawHangman();
+    }
+  });
+
+  els.categorySelect.addEventListener("change", () => {
+    if(active){
+      newGame();
+    }
+  });
+
+  buildKeyboard();
+  renderScore();
+  drawHangman();
+})();
+</script>
+<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<script>
+(() => {
+  'use strict';
+  // 元の英単語データを使用する
+  const BANK=[{"word":"ACHIEVE","category":"動詞","hint":"達成する。目標や成功を手に入れること","level":"easy"},{"word":"ACQUIRE","category":"動詞","hint":"獲得する。知識・技能・財産などを得ること","level":"easy"},{"word":"ADAPT","category":"動詞","hint":"適応する。環境や状況に合わせて変化すること","level":"easy"},{"word":"ASSUME","category":"動詞","hint":"〜だと思い込む、仮定する","level":"easy"},{"word":"CONSUME","category":"動詞","hint":"消費する。時間・エネルギー・資源などを使うこと","level":"easy"},{"word":"DECLINE","category":"動詞","hint":"減少する、衰える、断る","level":"easy"},{"word":"ESTABLISH","category":"動詞","hint":"設立する、確立する","level":"easy"},{"word":"MAINTAIN","category":"動詞","hint":"維持する、主張する","level":"easy"},{"word":"OBTAIN","category":"動詞","hint":"得る、入手する","level":"easy"},{"word":"REQUIRE","category":"動詞","hint":"必要とする、要求する","level":"easy"},{"word":"ANCIENT","category":"形容詞","hint":"古代の、とても古い","level":"easy"},{"word":"APPARENT","category":"形容詞","hint":"明らかな、見かけ上の","level":"easy"},{"word":"ESSENTIAL","category":"形容詞","hint":"不可欠な、本質的な","level":"easy"},{"word":"FREQUENT","category":"形容詞","hint":"頻繁な","level":"easy"},{"word":"INDIVIDUAL","category":"形容詞","hint":"個々の、個人の","level":"easy"},{"word":"POTENTIAL","category":"形容詞","hint":"潜在的な、可能性のある","level":"easy"},{"word":"RELEVANT","category":"形容詞","hint":"関連のある、適切な","level":"easy"},{"word":"SIGNIFICANT","category":"形容詞","hint":"重要な、かなりの、意味のある","level":"easy"},{"word":"ATTITUDE","category":"抽象語","hint":"態度、考え方","level":"easy"},{"word":"CONCEPT","category":"抽象語","hint":"概念、考え","level":"easy"},{"word":"CONTEXT","category":"抽象語","hint":"文脈、状況","level":"easy"},{"word":"EVIDENCE","category":"抽象語","hint":"証拠、根拠","level":"easy"},{"word":"FEATURE","category":"抽象語","hint":"特徴、特色","level":"easy"},{"word":"ISSUE","category":"抽象語","hint":"問題、論点","level":"easy"},{"word":"METHOD","category":"学術","hint":"方法、手法","level":"easy"},{"word":"THEORY","category":"学術","hint":"理論、学説","level":"easy"},{"word":"FACTOR","category":"学術","hint":"要因、要素","level":"easy"},{"word":"FUNCTION","category":"学術","hint":"機能、役割","level":"easy"},{"word":"ECONOMY","category":"社会","hint":"経済、経済活動全体","level":"easy"},{"word":"CULTURE","category":"社会","hint":"文化、生活様式や価値観の総体","level":"easy"},{"word":"POLICY","category":"社会","hint":"政策、方針","level":"easy"},{"word":"POVERTY","category":"社会","hint":"貧困","level":"easy"},{"word":"WELFARE","category":"社会","hint":"福祉、幸福","level":"easy"},{"word":"SPECIES","category":"科学","hint":"種。生物分類の基本単位","level":"easy"},{"word":"GENETIC","category":"科学","hint":"遺伝の、遺伝子の","level":"easy"},{"word":"CLIMATE","category":"科学","hint":"気候","level":"easy"},{"word":"ENERGY","category":"科学","hint":"エネルギー","level":"easy"},{"word":"CELLULAR","category":"科学","hint":"細胞の、細胞から成る","level":"easy"},{"word":"ACKNOWLEDGE","category":"動詞","hint":"認める、存在や事実を認識する","level":"normal"},{"word":"ANTICIPATE","category":"動詞","hint":"予想する、期待して待つ","level":"normal"},{"word":"COMPEL","category":"動詞","hint":"強いる、無理に〜させる","level":"normal"},{"word":"CONCEIVE","category":"動詞","hint":"考えつく、想像する","level":"normal"},{"word":"CONSTITUTE","category":"動詞","hint":"構成する、〜に相当する","level":"normal"},{"word":"DEPRIVE","category":"動詞","hint":"奪う。deprive A of B の形で頻出","level":"normal"},{"word":"DISTINGUISH","category":"動詞","hint":"区別する、見分ける","level":"normal"},{"word":"EMPHASIZE","category":"動詞","hint":"強調する","level":"normal"},{"word":"ENCOUNTER","category":"動詞","hint":"遭遇する、直面する","level":"normal"},{"word":"IMPLEMENT","category":"動詞","hint":"実行する、実施する","level":"normal"},{"word":"IMPLY","category":"動詞","hint":"暗に意味する","level":"normal"},{"word":"INHIBIT","category":"動詞","hint":"抑制する、妨げる","level":"normal"},{"word":"PERCEIVE","category":"動詞","hint":"知覚する、認識する","level":"normal"},{"word":"PRESERVE","category":"動詞","hint":"保存する、保護する","level":"normal"},{"word":"RESOLVE","category":"動詞","hint":"解決する、決意する","level":"normal"},{"word":"SUSTAIN","category":"動詞","hint":"維持する、支える","level":"normal"},{"word":"AMBIGUOUS","category":"形容詞","hint":"曖昧な、二通り以上に解釈できる","level":"normal"},{"word":"ARBITRARY","category":"形容詞","hint":"恣意的な、勝手な","level":"normal"},{"word":"COHERENT","category":"形容詞","hint":"一貫した、筋の通った","level":"normal"},{"word":"CONVENTIONAL","category":"形容詞","hint":"従来の、慣習的な","level":"normal"},{"word":"CRUCIAL","category":"形容詞","hint":"極めて重要な","level":"normal"},{"word":"INEVITABLE","category":"形容詞","hint":"避けられない、必然的な","level":"normal"},{"word":"LEGITIMATE","category":"形容詞","hint":"正当な、合法の","level":"normal"},{"word":"PLAUSIBLE","category":"形容詞","hint":"もっともらしい","level":"normal"},{"word":"PRECISE","category":"形容詞","hint":"正確な、精密な","level":"normal"},{"word":"SUBSTANTIAL","category":"形容詞","hint":"かなりの、実質的な","level":"normal"},{"word":"ASSUMPTION","category":"抽象語","hint":"仮定、思い込み","level":"normal"},{"word":"CONSEQUENCE","category":"抽象語","hint":"結果、重大な帰結","level":"normal"},{"word":"CONTROVERSY","category":"抽象語","hint":"論争、議論","level":"normal"},{"word":"PERSPECTIVE","category":"抽象語","hint":"観点、見方","level":"normal"},{"word":"PRIORITY","category":"抽象語","hint":"優先事項、優先順位","level":"normal"},{"word":"TENDENCY","category":"抽象語","hint":"傾向","level":"normal"},{"word":"CONSTRAINT","category":"抽象語","hint":"制約、制限","level":"normal"},{"word":"INCENTIVE","category":"抽象語","hint":"動機、奨励策","level":"normal"},{"word":"HYPOTHESIS","category":"学術","hint":"仮説","level":"normal"},{"word":"VARIABLE","category":"学術","hint":"変数、変わり得る要因","level":"normal"},{"word":"STATISTICS","category":"学術","hint":"統計、統計学","level":"normal"},{"word":"ANALYSIS","category":"学術","hint":"分析","level":"normal"},{"word":"INTERPRETATION","category":"学術","hint":"解釈","level":"normal"},{"word":"CORRELATION","category":"学術","hint":"相関関係","level":"normal"},{"word":"DISTRIBUTION","category":"学術","hint":"分布、配布","level":"normal"},{"word":"MECHANISM","category":"学術","hint":"仕組み、機構","level":"normal"},{"word":"INEQUALITY","category":"社会","hint":"不平等、格差","level":"normal"},{"word":"IMMIGRATION","category":"社会","hint":"移民、移住","level":"normal"},{"word":"DEMOCRACY","category":"社会","hint":"民主主義","level":"normal"},{"word":"LEGISLATION","category":"社会","hint":"法律、立法","level":"normal"},{"word":"GLOBALIZATION","category":"社会","hint":"グローバル化","level":"normal"},{"word":"BIODIVERSITY","category":"科学","hint":"生物多様性","level":"normal"},{"word":"EVOLUTION","category":"科学","hint":"進化","level":"normal"},{"word":"ECOSYSTEM","category":"科学","hint":"生態系","level":"normal"},{"word":"NEUROLOGY","category":"科学","hint":"神経学","level":"normal"},{"word":"PHENOMENON","category":"科学","hint":"現象。複数形 phenomena も頻出","level":"normal"},{"word":"ALLEVIATE","category":"動詞","hint":"軽減する。苦痛・問題・負担などを和らげる","level":"hard"},{"word":"ARTICULATE","category":"動詞","hint":"明確に述べる、はっきり表現する","level":"hard"},{"word":"CONTEMPLATE","category":"動詞","hint":"熟考する、じっくり考える","level":"hard"},{"word":"DETERIORATE","category":"動詞","hint":"悪化する、劣化する","level":"hard"},{"word":"DISSEMINATE","category":"動詞","hint":"広める、普及させる","level":"hard"},{"word":"ELICIT","category":"動詞","hint":"引き出す。反応・情報などを誘い出す","level":"hard"},{"word":"ERADICATE","category":"動詞","hint":"根絶する、完全に取り除く","level":"hard"},{"word":"EXACERBATE","category":"動詞","hint":"悪化させる","level":"hard"},{"word":"FACILITATE","category":"動詞","hint":"促進する、容易にする","level":"hard"},{"word":"RECONCILE","category":"動詞","hint":"調和させる、和解させる","level":"hard"},{"word":"SCRUTINIZE","category":"動詞","hint":"詳しく調べる、精査する","level":"hard"},{"word":"UNDERMINE","category":"動詞","hint":"徐々に弱める、損なう","level":"hard"},{"word":"INTRINSIC","category":"形容詞","hint":"本質的な、内在する","level":"hard"},{"word":"METICULOUS","category":"形容詞","hint":"細心の注意を払う、几帳面な","level":"hard"},{"word":"OBSOLETE","category":"形容詞","hint":"時代遅れの、廃れた","level":"hard"},{"word":"PERVASIVE","category":"形容詞","hint":"広範囲に浸透している","level":"hard"},{"word":"PROFOUND","category":"形容詞","hint":"深い、重大な","level":"hard"},{"word":"REDUNDANT","category":"形容詞","hint":"余分な、不必要な","level":"hard"},{"word":"RIGOROUS","category":"形容詞","hint":"厳密な、厳格な","level":"hard"},{"word":"TENTATIVE","category":"形容詞","hint":"仮の、暫定的な、ためらいがちな","level":"hard"},{"word":"VULNERABLE","category":"形容詞","hint":"傷つきやすい、弱い立場にある","level":"hard"},{"word":"EMPIRICAL","category":"形容詞","hint":"経験的な、観察や実験に基づく","level":"hard"},{"word":"PARADOX","category":"抽象語","hint":"逆説。一見矛盾するが真理を含む表現や状況","level":"hard"},{"word":"DILEMMA","category":"抽象語","hint":"板挟み、二者択一の難題","level":"hard"},{"word":"PREJUDICE","category":"抽象語","hint":"偏見、先入観","level":"hard"},{"word":"CONSENSUS","category":"抽象語","hint":"合意、意見の一致","level":"hard"},{"word":"DISCREPANCY","category":"抽象語","hint":"食い違い、不一致","level":"hard"},{"word":"RESILIENCE","category":"抽象語","hint":"回復力、立ち直る力","level":"hard"},{"word":"ACCOUNTABILITY","category":"抽象語","hint":"説明責任","level":"hard"},{"word":"SUSTAINABILITY","category":"抽象語","hint":"持続可能性","level":"hard"},{"word":"METHODOLOGY","category":"学術","hint":"方法論、研究手法の体系","level":"hard"},{"word":"VALIDITY","category":"学術","hint":"妥当性、有効性","level":"hard"},{"word":"INFERENCE","category":"学術","hint":"推論、推測","level":"hard"},{"word":"PARADIGM","category":"学術","hint":"思考の枠組み、模範となる体系","level":"hard"},{"word":"CAUSALITY","category":"学術","hint":"因果関係","level":"hard"},{"word":"GENERALIZATION","category":"学術","hint":"一般化、概括","level":"hard"},{"word":"REPLICATION","category":"学術","hint":"追試、再現","level":"hard"},{"word":"SYNTHESIS","category":"学術","hint":"統合、総合","level":"hard"},{"word":"BUREAUCRACY","category":"社会","hint":"官僚制度、官僚主義","level":"hard"},{"word":"SOVEREIGNTY","category":"社会","hint":"主権、統治権","level":"hard"},{"word":"IDEOLOGY","category":"社会","hint":"思想体系、イデオロギー","level":"hard"},{"word":"DEMOGRAPHIC","category":"社会","hint":"人口統計上の、人口層の","level":"hard"},{"word":"URBANIZATION","category":"社会","hint":"都市化","level":"hard"},{"word":"NEUROPLASTICITY","category":"科学","hint":"神経可塑性。脳や神経系が変化・適応する性質","level":"hard"},{"word":"HOMEOSTASIS","category":"科学","hint":"恒常性。生体が内部環境を一定に保つ働き","level":"hard"},{"word":"PHOTOSYNTHESIS","category":"科学","hint":"光合成","level":"hard"},{"word":"METABOLISM","category":"科学","hint":"代謝","level":"hard"},{"word":"CONSCIOUSNESS","category":"科学","hint":"意識、意識状態","level":"hard"}];
+  const API='https://hangman-auth.okazakiat.workers.dev/token';
+  const MAX={easy:8,normal:6,hard:5};
+  const $=id=>document.getElementById(id);
+  const store=localStorage;
+  let client=null, channel=null, myId='', code='', amHost=false, ready=false;
+  let rival=null, game=null, finish=null, pending=false, roundSerial=0;
+  let joinTimer=null, hostResponded=false, sessionId='';
+  const state={};
+  const stamp=()=>Date.now();
+  const randomCode=()=>{const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let a=new Uint8Array(6);crypto.getRandomValues(a);return [...a].map(x=>chars[x%chars.length]).join('');};
+  const name=()=>{const n=$('onlineName').value.trim().slice(0,14)||'プレイヤー';store.setItem('hm_ably_name',n);return n;};
+  const notice=s=>{$('onlineStatus').textContent=s;};
+  const message=s=>{$('message').textContent=s;};
+  const setButtons=()=>{
+    $('startBattle').classList.toggle('hide',!amHost||!rival);
+    $('startBattle').disabled=!ready||!rival||(game&&!finish);
+    $('startBattle').textContent=game?'次の問題を開始':'対戦開始';
+  };
+  const statusLine=(p)=>{
+    if(!p)return '未参加';
+    if(!game)return '参加中・開始待ち';
+    const letters=(p.guesses||[]);
+    const misses=letters.filter(ch=>!game.item.word.includes(ch)).length;
+    const hit=[...game.item.word].filter(ch=>letters.includes(ch)).length;
+    const state=p.failed?'失敗':p.solved?'正解':finish?'終了':'挑戦中';
+    return `${state} / 正解文字 ${hit}/${game.item.word.length} / ミス ${misses}/${MAX[game.level]}`;
+  };
+  const updateProgress=()=>{
+    $('meName').textContent='自分：'+name()+(amHost?'（親）':'');
+    $('rivalName').textContent='相手：'+(rival?.name||'参加待ち');
+    $('meProgress').textContent=statusLine(state[myId]||{guesses:[]});
+    $('rivalProgress').textContent=statusLine(rival?(state[rival.id]||{guesses:[]}):null);
+    setButtons();
+  };
+  function display(){
+    if(!game){updateProgress();return;}
+    const guesses=state[myId]?.guesses||[];
+    window.hmOnlineRender(game.item,guesses,game.level,!!finish);
+    updateProgress();
+    if(finish){
+      const winner=finish.winner;
+      const heading=winner===null?'DRAW!':winner===myId?'YOU WIN!':'YOU LOSE';
+      $('resultTitle').textContent=heading;
+      $('resultText').textContent=winner===null?'両者とも失敗しました。':winner===myId?'先に正解しました。':'相手が先に正解しました。';
+      $('resultAnswer').textContent='ANSWER: '+game.item.word;
+      $('againBtn').textContent=amHost?'次の問題（下の対戦開始ボタン）':'ホストの次の問題を待つ';
+      $('overlay').classList.add('show');
+      message(heading);
+    }else{
+      $('overlay').classList.remove('show');
+    }
+  }
+  function resetGame(){
+    Object.keys(state).forEach(k=>delete state[k]);
+    finish=null;pending=false;
+    $('overlay').classList.remove('show');
+    display();
+  }
+  function parseError(e){return e?.message||String(e);}
+  async function connect(){
+    if(client){await client.connection.once('connected');return;}
+    if(!window.Ably?.Realtime)throw Error('Ablyライブラリを読み込めません。通信環境をご確認ください。');
+    // authUrlで期限切れ時も自動的にトークンを更新する
+    client=new Ably.Realtime({authUrl:API,autoConnect:true});
+    await new Promise((resolve,reject)=>{
+      if(client.connection.state==='connected')return resolve();
+      const success=()=>{cleanup();resolve();};
+      const error=change=>{cleanup();reject(Error(change.reason?.message||'Ably接続失敗'));};
+      const cleanup=()=>{client.connection.off('connected',success);client.connection.off('failed',error);};
+      client.connection.on('connected',success);
+      client.connection.on('failed',error);
+    });
+    myId=client.auth.clientId;
+    if(!myId)throw Error('認証IDを取得できません。');
+    client.connection.on(change=>{
+      if(change.current==='disconnected'||change.current==='suspended')notice('通信が切断されました。自動再接続を試みています。');
+      if(change.current==='connected'&&code)notice('接続中：部屋 '+code);
+    });
+  }
+  async function send(type,data={}){
+    if(!channel)return;
+    await channel.publish(type,{...data,session:sessionId,sender:myId,time:stamp()});
+  }
+  function safeRoom(id){return /^[A-Z2-9]{6}$/.test(id);}
+  async function enter(id,host){
+    await connect();
+    code=id;amHost=host;ready=false;rival=null;game=null;finish=null;pending=false;roundSerial=0;
+    sessionId=crypto.randomUUID();
+    window.hmOnlineActive=true;
+    $('lobby').classList.add('hide');$('roomView').classList.remove('hide');
+    $('roomCode').textContent=id;$('difficulty').disabled=true;$('categorySelect').disabled=true;
+    $('newGameBtn').disabled=true;$('overlay').classList.remove('show');
+    // チャンネルへの参加後、プレゼンスで在線者を確認する
+    channel=client.channels.get('hangman:'+id);
+    channel.subscribe(handle);
+    channel.presence.subscribe(onPresence);
+    await channel.attach();
+    await channel.presence.enter({name:name(),role:host?'host':'guest',session:sessionId});
+    ready=true;
+    await onPresence();
+    if(host){notice('部屋を作成しました。相手に部屋番号を伝えてください。');}
+    else{
+      notice('ホストに参加を通知しています。');
+      await send('hello',{name:name()});
+      joinTimer=setTimeout(()=>{if(!hostResponded&&code===id)notice('ホストから返事がありません。部屋番号とホストの接続状態をご確認ください。');},9000);
+    }
+    updateProgress();
+  }
+  async function onPresence(){
+    if(!channel)return;
+    try{
+      const members=await channel.presence.get();
+      const players=members.filter(m=>m.data&&(m.data.role==='host'||m.data.role==='guest'));
+      const others=players.filter(m=>m.clientId!==myId);
+      if(amHost){
+        const guest=others.find(m=>m.data.role==='guest');
+        if(guest){rival={id:guest.clientId,name:guest.data.name||'プレイヤー'};}
+        else{rival=null;if(game&&!finish)notice('相手の接続が切れました。再接続を待っています。');}
+      }else{
+        const host=others.find(m=>m.data.role==='host');
+        if(host)rival={id:host.clientId,name:host.data.name||'ホスト'};
+      }
+      if(others.filter(m=>m.data.role==='guest').length>1||players.filter(m=>m.data.role==='host').length>1){
+        notice('この部屋に3台以上接続されています。2人だけで利用してください。');
+      }
+      updateProgress();
+    }catch(e){notice('参加者確認に失敗：'+parseError(e));}
+  }
+  function applyProgress(m){
+    if(!game||m.round!==game.round)return;
+    const sender=m.sender;
+    if(sender!==myId && sender!==rival?.id)return;
+    const guesses=Array.isArray(m.guesses)?m.guesses.filter(c=>/^[A-Z]$/.test(c)).slice(0,26):[];
+    const old=state[sender]?.guesses||[];
+    if(guesses.length<old.length)return;
+    // 進捗は単調に増加する
+    const seen=[...new Set([...old,...guesses])];
+    const misses=seen.filter(c=>!game.item.word.includes(c)).length;
+    const solved=[...game.item.word].every(c=>seen.includes(c));
+    state[sender]={guesses:seen,failed:misses>=MAX[game.level],solved};
+    display();
+    if(amHost&&!finish&&rival&&state[myId]?.failed&&state[rival.id]?.failed){
+      send('finish',{round:game.round,winner:null}).catch(e=>notice(parseError(e)));
+    }
+  }
+  function handle(msg){
+    const m=msg.data;
+    if(!m||!m.sender||m.sender===myId)return;
+    if(msg.name==='hello'&&amHost){
+      if(rival&&rival.id!==m.sender)return;
+      rival={id:m.sender,name:String(m.name||'プレイヤー').slice(0,14)};
+      send('welcome',{name:name(),guestId:m.sender,snapshot:game?{round:game.round,index:game.index,level:game.level,guesses:state[myId]?.guesses||[],finished:finish}:null}).catch(e=>notice(parseError(e)));
+      updateProgress();
+      return;
+    }
+    if(msg.name==='welcome'&&!amHost&&m.guestId===myId){
+      hostResponded=true;clearTimeout(joinTimer);
+      rival={id:m.sender,name:String(m.name||'ホスト').slice(0,14)};
+      notice('ホストに接続できました。対戦開始をお待ちください。');
+      if(m.snapshot&&!game)startFrom(m.snapshot);
+      updateProgress();
+      return;
+    }
+    if(msg.name==='start'&&!amHost){
+      if(rival&&m.sender!==rival.id)return;
+      if(!rival)rival={id:m.sender,name:'ホスト'};
+      hostResponded=true;clearTimeout(joinTimer);
+      startFrom(m);return;
+    }
+    if(msg.name==='progress'){applyProgress(m);return;}
+    if(msg.name==='finish'){
+      if(!game||m.round!==game.round||finish)return;
+      // 最初に届いた勝利メッセージを採用する
+      if(m.winner!==null&&m.winner!==myId&&m.winner!==rival?.id)return;
+      finish={winner:m.winner};display();return;
+    }
+    if(msg.name==='leave'){
+      if(rival?.id===m.sender){rival=null;updateProgress();notice('相手が退出しました。');}
+    }
+  }
+  function startFrom(m){
+    if(!Number.isInteger(m.index)||m.index<0||m.index>=BANK.length||!MAX[m.level])return;
+    if(game&&game.round===m.round)return;
+    game={round:String(m.round),index:m.index,item:BANK[m.index],level:m.level};
+    resetGame();
+    if(Array.isArray(m.guesses)&&rival)applyProgress({sender:rival.id,round:game.round,guesses:m.guesses});
+    if(m.finished){finish=m.finished;display();}
+    notice('対戦中：同じ英単語を推測してください。');
+    message('A〜Zから文字を選んでください。');
+  }
+  async function nextRound(){
+    if(!amHost||!rival||!ready||(game&&!finish))return;
+    const level=$('difficulty').value,category=$('categorySelect').value;
+    let pool=BANK.map((item,index)=>({item,index})).filter(o=>o.item.level===level&&(category==='all'||o.item.category===category));
+    if(!pool.length)pool=BANK.map((item,index)=>({item,index})).filter(o=>category==='all'||o.item.category===category);
+    if(!pool.length){notice('問題がありません。');return;}
+    const index=pool[Math.floor(Math.random()*pool.length)].index;
+    const round=crypto.randomUUID();
+    startFrom({round,index,level});
+    try{await send('start',{round,index,level});}catch(e){notice('開始通知エラー：'+parseError(e));}
+  }
+  async function onlineGuess(ch){
+    if(!ready||!game||finish||pending||!/^[A-Z]$/.test(ch))return;
+    const current=state[myId]?.guesses||[];
+    if(current.includes(ch)||state[myId]?.failed||state[myId]?.solved)return;
+    const guesses=[...current,ch];
+    const miss=guesses.filter(c=>!game.item.word.includes(c)).length;
+    const solved=[...game.item.word].every(c=>guesses.includes(c));
+    state[myId]={guesses,failed:miss>=MAX[game.level],solved};
+    display();
+    try{
+      await send('progress',{round:game.round,guesses});
+      if(solved){
+        pending=true;notice('正解です！ 勝敗を確定しています。');
+        await send('finish',{round:game.round,winner:myId});
+        // 送信者にはイベントが戻らないため、自分の勝利を反映
+        if(!finish)finish={winner:myId};
+        display();pending=false;
+      }else if(miss>=MAX[game.level]){
+        notice('失敗です。相手の結果を待ちます。');
+      }
+    }catch(e){pending=false;notice('送信エラー：'+parseError(e));}
+  }
+  window.hmOnlineGuess=onlineGuess;
+  async function leave(){
+    clearTimeout(joinTimer);
+    try{if(channel){await send('leave');await channel.presence.leave();channel.unsubscribe();channel.presence.unsubscribe();await channel.detach();}}catch(e){}
+    channel=null;code='';ready=false;game=null;rival=null;finish=null;pending=false;hostResponded=false;
+    window.hmOnlineActive=false;
+    $('lobby').classList.remove('hide');$('roomView').classList.add('hide');
+    $('newGameBtn').disabled=false;$('difficulty').disabled=false;$('categorySelect').disabled=false;
+    $('overlay').classList.remove('show');notice('退出しました。部屋を作成するか参加してください。');
+  }
+  $('onlineName').value=store.getItem('hm_ably_name')||'プレイヤー';
+  const invited=new URLSearchParams(location.search).get('room');
+  if(invited&&safeRoom(invited.toUpperCase()))$('joinCode').value=invited.toUpperCase();
+  $('makeRoom').addEventListener('click',async()=>{
+    try{const id=randomCode();await enter(id,true);}catch(e){notice('部屋作成エラー：'+parseError(e));await leave();}
+  });
+  $('joinRoom').addEventListener('click',async()=>{
+    const id=$('joinCode').value.trim().toUpperCase();
+    if(!safeRoom(id)){notice('部屋番号を6文字で入力してください。');return;}
+    try{await enter(id,false);}catch(e){notice('参加エラー：'+parseError(e));await leave();}
+  });
+  $('startBattle').addEventListener('click',nextRound);
+  $('leaveBattle').addEventListener('click',leave);
+  $('againBtn').addEventListener('click',()=>{if(window.hmOnlineActive){$('overlay').classList.remove('show');if(amHost&&finish)nextRound();}});
+  $('copyCode').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(code);notice('部屋番号をコピーしました。');}catch(e){notice('部屋番号：'+code);}});
+  $('shareLink').addEventListener('click',async()=>{
+    const url=new URL(location.href);url.searchParams.set('room',code);
+    try{if(navigator.share)await navigator.share({title:'HANGMAN 対戦',url:url.href});else{await navigator.clipboard.writeText(url.href);notice('招待リンクをコピーしました。');}}catch(e){notice('招待リンク：'+url.href);}
+  });
+  // シングルモードへの影響を防ぐ
+  $('difficulty').addEventListener('change',()=>{if(window.hmOnlineActive){notice('難易度の変更は次の問題から反映されます。');}});
+})();
+</script>
+</body>
+</html>
