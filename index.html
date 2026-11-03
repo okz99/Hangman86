@@ -439,7 +439,13 @@
   .online .roomGroup .tiny{margin:0;font-weight:bold}
   .online .roomActions{margin-top:4px}
   .online .roomActions button{font-size:12px;overflow-wrap:anywhere}
-  @media(max-width:430px){.online{padding:9px;border-width:4px}}
+  .online .entryRow{display:grid;grid-template-columns:minmax(130px,1fr) minmax(0,1.05fr);gap:8px;align-items:end;margin-top:9px}
+  .online .entryRow button{width:100%;white-space:nowrap}
+  .online .entryRow label{display:block;font-size:11px;font-weight:bold;margin-bottom:4px}
+  .online .entryRow select{width:100%;height:44px;background:#fffbea;border:2px solid #80775a;border-radius:5px;padding:4px;font:inherit;font-size:14px}
+  .online .entryRow input{font-variant-numeric:tabular-nums;letter-spacing:.10em}
+  .online .sumPoints{font-size:13px;font-weight:bold;color:#334a2e;margin:3px 0 6px}
+  @media(max-width:430px){.online{padding:9px;border-width:4px}.online .entryRow{grid-template-columns:minmax(110px,1fr) minmax(0,1.1fr)}.online .entryRow button{padding:5px 3px;font-size:13px}}
 </style>
 </head>
 <body>
@@ -505,17 +511,22 @@
       <div id="turnBanner" class="turnBanner">交互に1文字ずつ入力して得点を競います</div>
       <div id="matchView" class="hide">
         <div class="og matchPlayers">
-          <div class="player" id="meCard"><strong id="meName">自分</strong><div class="points"><span id="mePoints">0</span> 点</div><div id="meProgress">待機中</div></div>
-          <div class="player" id="rivalCard"><strong id="rivalName">相手</strong><div class="points"><span id="rivalPoints">0</span> 点</div><div id="rivalProgress">待機中</div></div>
+          <div class="player" id="meCard"><strong id="meName">自分</strong><div class="points"><span id="mePoints">0</span> 点</div><div class="sumPoints">合計：<span id="meTotal">0</span>点</div><div id="meProgress">待機中</div></div>
+          <div class="player" id="rivalCard"><strong id="rivalName">相手</strong><div class="points"><span id="rivalPoints">0</span> 点</div><div class="sumPoints">合計：<span id="rivalTotal">0</span>点</div><div id="rivalProgress">待機中</div></div>
         </div>
         <button class="matchNext hide" id="startBattle" type="button">対戦開始</button>
       </div>
     </div>
-    <div class="og" id="lobby">
-      <div class="wide"><label for="onlineName">プレイヤー名</label><input id="onlineName" maxlength="14" placeholder="プレイヤー名"></div>
-      <button id="makeRoom" type="button">部屋を作成</button>
-      <button id="joinRoom" type="button">部屋に参加</button>
-      <div class="wide"><label for="joinCode">部屋番号（6文字）</label><input id="joinCode" maxlength="6" placeholder="例：ABC123" autocomplete="off" autocapitalize="characters"></div>
+    <div id="lobby">
+      <div><label for="onlineName">プレイヤー名</label><input id="onlineName" maxlength="14" placeholder="プレイヤー名"></div>
+      <div class="entryRow">
+        <button id="makeRoom" type="button">部屋を作成</button>
+        <div><label for="difficulty">受験レベル</label><select id="difficulty"><option value="easy">中学受験</option><option value="normal">高校受験</option><option value="hard" selected>大学受験</option></select></div>
+      </div>
+      <div class="entryRow">
+        <button id="joinRoom" type="button">部屋に参加</button>
+        <div><label for="joinCode">部屋番号（数字6桁）</label><input id="joinCode" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="例：123456" autocomplete="off"></div>
+      </div>
     </div>
     <div id="roomView" class="roomGroup hide">
       <div class="tiny">相手に伝える部屋番号</div>
@@ -527,18 +538,8 @@
       </div>
     </div>
     <div id="onlineStatus" class="status" role="status">対戦にはインターネットが必要です。部屋を作成するか、部屋番号を入力して参加してください。</div>
-    <p class="tiny">ルール：プレーヤー1と2が交互に1文字入力します。正解文字が複数あれば出現個数がそのまま得点になります。正解・不正解とも次は相手の番です。全ての文字が開いた時点で高得点の人が勝利し、同点は引き分けです。</p>
   </section>
   <div class="controls">
-    <div class="panel">
-      <label for="difficulty">受験レベル（各50問）</label>
-      <select id="difficulty">
-        <option value="easy">中学受験</option>
-        <option value="normal">高校受験</option>
-        <option value="hard" selected>大学受験</option>
-      </select>
-    </div>
-
 <input type="hidden" id="categorySelect" value="all">
 
     <div class="panel">
@@ -1075,9 +1076,9 @@
   const store=localStorage;
   const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let client=null, channel=null, myId='', code='', amHost=false, ready=false;
-  let rival=null, game=null, pending=false, hostResponded=false;
+  let rival=null, game=null, totals=[0,0], pending=false, hostResponded=false;
   let joinTimer=null, sessionId='', guestRequestId=null, busy=false;
-  const randomCode=()=>{const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const a=new Uint8Array(6);crypto.getRandomValues(a);return [...a].map(v=>chars[v%chars.length]).join('');};
+  const randomCode=()=>{const a=new Uint32Array(1);crypto.getRandomValues(a);return String(100000+(a[0]%900000));};
   const name=()=>{const n=$('onlineName').value.trim().slice(0,14)||'プレイヤー';store.setItem('hm_ably_name',n);return n;};
   const notice=t=>{$('onlineStatus').textContent=t;};
   const message=t=>{$('message').textContent=t;};
@@ -1089,7 +1090,7 @@
   const snapshot=()=>game?{
     round:game.round,index:game.index,level:game.level,
     turn:game.turn,guessed:[...game.guessed],points:[...game.points],
-    seq:game.seq,finished:game.finished,last:game.last
+    totals:[...totals],seq:game.seq,finished:game.finished,last:game.last
   }:null;
 
   function updateUI(){
@@ -1098,6 +1099,8 @@
     $('rivalName').textContent=`プレーヤー${amHost?2:1}：${rival?.name||'参加待ち'}`;
     $('mePoints').textContent=game?game.points[myNumber()-1]:0;
     $('rivalPoints').textContent=game?game.points[amHost?1:0]:0;
+    $('meTotal').textContent=totals[myNumber()-1];
+    $('rivalTotal').textContent=totals[amHost?1:0];
     $('meProgress').textContent=!game?'開始待ち':game.finished?'対戦終了':yourTurn()?'あなたの番です':'相手の番です';
     $('rivalProgress').textContent=!rival?'未参加':!game?'開始待ち':game.finished?'対戦終了':yourTurn()?'待機中':'入力中';
     $('meCard').classList.toggle('turn',!!game&&!game.finished&&game.turn===myNumber());
@@ -1154,11 +1157,11 @@
     if(!channel)throw Error('部屋に接続されていません。');
     await channel.publish(type,{...data,sender:myId,session:sessionId});
   }
-  function safeRoom(id){return /^[A-Z2-9]{6}$/.test(id);}
+  function safeRoom(id){return /^[0-9]{6}$/.test(id);}
   async function enter(id,host){
     if(channel)throw Error('既に部屋に参加しています。');
     await connect();
-    code=id;amHost=host;ready=false;rival=null;game=null;pending=false;hostResponded=false;guestRequestId=null;busy=false;
+    code=id;amHost=host;ready=false;rival=null;game=null;totals=[0,0];pending=false;hostResponded=false;guestRequestId=null;busy=false;
     sessionId=crypto.randomUUID();
     window.hmOnlineActive=true;window.hmOnlineMyTurn=false;
     $('lobby').classList.add('hide');$('roomView').classList.remove('hide');$('matchView').classList.remove('hide');
@@ -1206,6 +1209,9 @@
     if(game&&game.round===state.round&&state.seq<=game.seq)return;
     const guessed=Array.isArray(state.guessed)?[...new Set(state.guessed.filter(c=>typeof c==='string'&&letters.includes(c)))]:[];
     const points=Array.isArray(state.points)&&state.points.length===2?state.points.map(n=>Math.max(0,Math.floor(Number(n)||0))):[0,0];
+    // 古いスナップショットも読み取れるが、通常は累計点数を同期する
+    totals=Array.isArray(state.totals)&&state.totals.length===2
+      ?state.totals.map(n=>Math.max(0,Math.floor(Number(n)||0))):[0,0];
     game={round:state.round,index:state.index,item:BANK[state.index],level:state.level,turn:state.turn===2?2:1,guessed,points,seq:Number.isInteger(state.seq)?state.seq:0,finished:Boolean(state.finished),last:state.last||null};
     pending=false;
     updateUI();
@@ -1220,6 +1226,7 @@
     game.guessed.push(ch);
     const hit=counts(game.item.word,ch);
     game.points[player-1]+=hit;
+    totals[player-1]+=hit;
     game.last={player,letter:ch,hit};
     game.turn=player===1?2:1;
     game.seq++;
@@ -1231,6 +1238,7 @@
       return true;
     }catch(e){
       // 送信が失敗した場合は確定したことにせず元に戻す
+      totals=[...previous.totals];
       game={...previous,item:BANK[previous.index],guessed:[...previous.guessed],points:[...previous.points]};
       busy=false;updateUI();notice('通信エラー：'+err(e));
       return false;
@@ -1305,7 +1313,7 @@
   async function leave(){
     clearTimeout(joinTimer);
     try{if(channel){await send('leave');await channel.presence.leave();channel.unsubscribe();channel.presence.unsubscribe();await channel.detach();}}catch(e){}
-    channel=null;code='';ready=false;rival=null;game=null;pending=false;hostResponded=false;busy=false;
+    channel=null;code='';ready=false;rival=null;game=null;totals=[0,0];pending=false;hostResponded=false;busy=false;
     window.hmOnlineActive=false;window.hmOnlineMyTurn=false;
     $('lobby').classList.remove('hide');$('roomView').classList.add('hide');$('matchView').classList.add('hide');
     $('newGameBtn').disabled=false;$('difficulty').disabled=false;$('categorySelect').disabled=false;
@@ -1314,13 +1322,13 @@
   }
   $('onlineName').value=store.getItem('hm_ably_name')||'プレイヤー';
   const invited=new URLSearchParams(location.search).get('room');
-  if(invited&&safeRoom(invited.toUpperCase()))$('joinCode').value=invited.toUpperCase();
+  if(invited&&safeRoom(invited))$('joinCode').value=invited;
   $('makeRoom').addEventListener('click',async()=>{
     try{await enter(randomCode(),true);}catch(e){notice('部屋作成エラー：'+err(e));await leave();}
   });
   $('joinRoom').addEventListener('click',async()=>{
-    const id=$('joinCode').value.trim().toUpperCase();
-    if(!safeRoom(id)){notice('部屋番号を6文字で入力してください。');return;}
+    const id=$('joinCode').value.trim();
+    if(!safeRoom(id)){notice('部屋番号を数字6桁で入力してください。');return;}
     try{await enter(id,false);}catch(e){notice('参加エラー：'+err(e));await leave();}
   });
   $('startBattle').addEventListener('click',nextRound);
